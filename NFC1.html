@@ -1,446 +1,397 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NFC 抽卡对战</title>
-<script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:white;overflow-x:hidden;touch-action:manipulation}
-.screen{display:none;min-height:100vh;padding:20px}
-.screen.active{display:block}
-.game-title{text-align:center;font-size:2em;margin:20px 0;color:#00f3ff}
-.btn{display:block;width:90%;max-width:300px;margin:15px auto;padding:15px;border:none;border-radius:12px;font-size:1.1em;font-weight:bold;cursor:pointer;background:linear-gradient(135deg,#00f3ff,#0080ff);color:white}
-.btn-secondary{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2)}
-.btn-warning{background:linear-gradient(135deg,#ff9500,#ff6348)}
-.btn:active{transform:scale(0.95)}
-.btn:disabled{opacity:0.5;cursor:not-allowed}
-.lobby-box{max-width:400px;margin:20px auto;background:rgba(255,255,255,0.05);padding:20px;border-radius:15px}
-.code-input{width:100%;padding:15px;font-size:1.2em;text-align:center;background:rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.2);border-radius:10px;color:white;margin:10px 0}
-.room-code{font-size:2em;color:#00f3ff;text-align:center;margin:10px 0;font-family:monospace;letter-spacing:5px}
-.status-box{text-align:center;padding:10px;margin:10px 0;border-radius:10px;font-size:0.9em}
-.status-ok{background:rgba(46,213,115,0.2);color:#2ed573}
-.status-wait{background:rgba(255,193,7,0.2);color:#ffc107}
-.status-err{background:rgba(255,71,87,0.2);color:#ff4757}
-.rule-hint{text-align:center;color:#888;font-size:0.8em;margin:10px 0;padding:10px;background:rgba(255,255,255,0.05);border-radius:10px}
-.rule-hint span{color:#ff9500}
-.fighter{background:rgba(255,255,255,0.05);border-radius:15px;padding:15px;text-align:center;margin:10px 0;border:2px solid transparent}
-.fighter.active{border-color:#00f3ff;box-shadow:0 0 20px rgba(0,243,255,0.3)}
-.hp-bar{width:100%;height:12px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;margin:10px 0}
-.hp-fill{height:100%;background:linear-gradient(90deg,#00d26a,#00f3ff);transition:width 0.3s}
-.hp-fill.red{background:linear-gradient(90deg,#ff4757,#ff6348)}
-.hand-area{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,0.95),transparent);padding:20px;padding-bottom:30px}
-.hand-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;color:#888;font-size:0.9em}
-.hand-info span{color:#00f3ff}
-.card{min-width:80px;height:115px;background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;margin-right:10px;flex-shrink:0}
-.card.disabled{opacity:0.4;pointer-events:none;filter:grayscale(100%)}
-.card.attack-used{border-color:#ff4757}
-.cards-container{display:flex;overflow-x:auto;padding:10px;scrollbar-width:none}
-.cards-container::-webkit-scrollbar{display:none}
-.battle-log{height:120px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:10px;padding:10px;margin-bottom:210px;font-size:0.85em}
-.log-entry{margin:3px 0;padding:5px;border-left:3px solid #00f3ff;padding-left:8px}
-.damage{color:#ff6b6b;font-weight:bold}
-.heal{color:#51cf66;font-weight:bold}
-.auto-end{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:20px;border-radius:15px;z-index:1000;text-align:center;border:2px solid #00f3ff}
-.auto-end.show{display:block}
-.waiting-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;flex-direction:column;align-items:center;justify-content:center}
-.waiting-overlay.active{display:flex}
-.spinner{width:50px;height:50px;border:4px solid rgba(255,255,255,0.1);border-top-color:#00f3ff;border-radius:50%;animation:spin 1s linear infinite;margin-bottom:20px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.ping{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.5);padding:5px 10px;border-radius:15px;font-size:0.8em}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC炸弹猫 - Exploding Kittens</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+        body { font-family: 'ZCOOL KuaiLe', cursive, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px);} 75%{transform:translateX(10px);} }
+        .nfc-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0.7);} 50%{box-shadow:0 0 0 20px rgba(255,255,255,0);} }
+        .hidden-card { background: repeating-linear-gradient(45deg, #2d3748, #2d3748 10px, #4a5568 10px, #4a5568 20px); }
+        #gameLog { max-height: 150px; overflow-y: auto; }
+        .hand-card { transition: all 0.2s; cursor: pointer; }
+        .hand-card.selected { transform: translateY(-20px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); border: 3px solid #fbbf24; }
+        .player-avatar { transition: all 0.3s; }
+        .player-avatar.active { transform: scale(1.1); box-shadow: 0 0 20px #fbbf24; }
+        .player-avatar.dead { filter: grayscale(100%) opacity(0.5); }
+    </style>
 </head>
-<body>
-<div id="mainMenu" class="screen active">
-<h1 class="game-title">⚡ NFC 抽卡对战</h1>
-<div class="rule-hint">
-<span>📋 规则：</span>初始2张卡 | 每回合抽1张 | 手牌上限5张<br>
-<span>⚡ 规则：</span>1行动点 | 只能攻击1次 | 自动结束回合
-</div>
-<button class="btn" onclick="game.startLocal()">👤 本地练习</button>
-<button class="btn btn-secondary" onclick="game.showScreen('lobby')">🌐 创建房间</button>
-<button class="btn btn-secondary" onclick="game.showScreen('join')">🚀 加入房间</button>
-</div>
+<body class="min-h-screen text-white overflow-x-hidden">
+    <div id="app" class="container mx-auto px-2 py-4 max-w-6xl">
+        <header class="text-center mb-4">
+            <h1 class="text-4xl md:text-6xl font-bold text-yellow-300 drop-shadow-lg">💣 NFC炸弹猫 💣</h1>
+            <p class="text-lg mt-2 text-purple-200">扫描NFC卡牌 | 联机对战 | 活到最后</p>
+        </header>
 
-<div id="lobby" class="screen">
-<h2 style="text-align:center">🏠 创建房间</h2>
-<div class="lobby-box">
-<button class="btn" onclick="net.createRoom()" id="createBtn" style="margin-top:0">生成房间代码</button>
-<div id="roomDisplay" style="display:none;margin-top:20px">
-<div style="color:#888;text-align:center">告诉朋友这个代码：</div>
-<div class="room-code" id="roomCode">----</div>
-<div class="status-box status-wait" id="hostStatus">等待对手加入...</div>
-<button class="btn btn-secondary" onclick="net.copyCode()">📋 复制代码</button>
-</div>
-<div class="status-box status-err" id="hostError" style="display:none">
-服务器连接失败<br>
-<button class="btn" onclick="game.startLocal()" style="margin-top:10px;font-size:0.9em">改为本地练习</button>
-</div>
-</div>
-<button class="btn btn-secondary" onclick="game.showScreen('mainMenu')">返回</button>
-</div>
+        <div id="lobbyPanel" class="bg-white/10 backdrop-blur-md rounded-2xl p-6 mb-4 border border-white/20">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h3 class="text-xl mb-3 text-yellow-300">🏠 游戏大厅</h3>
+                    <input type="text" id="playerName" placeholder="输入你的名字" class="w-full px-4 py-2 rounded-lg bg-white/20 border border-white/30 text-white placeholder-white/60 mb-2">
+                    <div class="flex gap-2">
+                        <button onclick="createRoom()" class="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 px-4 py-2 rounded-lg font-bold transition transform hover:scale-105">创建房间</button>
+                        <button onclick="joinRoom()" class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 px-4 py-2 rounded-lg font-bold transition transform hover:scale-105">加入房间</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl mb-3 text-yellow-300">🔗 房间信息</h3>
+                    <div id="roomInfo" class="bg-black/30 rounded-lg p-3 text-sm font-mono">
+                        <p>状态: <span id="connStatus" class="text-red-400">未连接</span></p>
+                        <p>房间号: <span id="roomCode" class="text-yellow-300">-</span></p>
+                        <p>玩家数: <span id="playerCount">0</span>/5</p>
+                    </div>
+                    <div id="playerList" class="mt-2 flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+            <div id="firebaseConfig" class="mt-4 p-3 bg-black/20 rounded text-xs">
+                <p class="text-yellow-300 mb-1">🔧 Firebase配置:</p>
+                <input type="text" id="fbApiKey" placeholder="apiKey" class="w-full mb-1 px-2 py-1 rounded bg-white/10 text-xs">
+                <input type="text" id="fbDbUrl" placeholder="databaseURL" value="https://nfc-gane-default-rtdb.firebaseio.com" class="w-full px-2 py-1 rounded bg-white/10 text-xs">
+            </div>
+        </div>
 
-<div id="join" class="screen">
-<h2 style="text-align:center">🚀 加入房间</h2>
-<div class="lobby-box">
-<div style="color:#888;margin-bottom:10px">输入朋友给的代码：</div>
-<input type="text" class="code-input" id="joinInput" placeholder="如：A3F9K2" maxlength="6">
-<button class="btn btn-warning" onclick="net.joinRoom()" id="joinBtn">加入对战</button>
-<div class="status-box" id="joinStatus" style="display:none;margin-top:10px"></div>
-</div>
-<button class="btn btn-secondary" onclick="game.showScreen('mainMenu')">返回</button>
-</div>
 
-<div id="gameScreen" class="screen">
-<div class="ping" id="pingText">延迟: --ms</div>
-<div style="text-align:center;padding:8px;background:rgba(0,243,255,0.1);border-radius:20px;margin-bottom:10px;font-size:0.85em">
-<span id="turnText">🎮 你的回合</span> | 
-<span style="color:#ff9500">⚡<span id="apText">1</span>/1</span> | 
-<span id="attackStatus" style="color:#ff6b6b;font-size:0.9em">可攻击</span>
-</div>
-<div class="fighter active" id="p1Box">
-<div style="font-size:2.5em">🧙‍♂️</div>
-<div>你</div>
-<div class="hp-bar"><div class="hp-fill" id="p1Hp" style="width:100%"></div></div>
-<div><span id="p1HpText">100</span>/100 HP</div>
-</div>
-<div class="fighter" id="p2Box">
-<div style="font-size:2.5em">👹</div>
-<div>对手</div>
-<div class="hp-bar"><div class="hp-fill red" id="p2Hp" style="width:100%"></div></div>
-<div><span id="p2HpText">100</span>/100 HP</div>
-</div>
-<div class="battle-log" id="gameLog"><div class="log-entry">⚔️ 战斗开始！初始2张卡，每回合抽1张</div></div>
-<div class="hand-area">
-<div class="hand-info">
-<span>手牌: <span id="handCount">0</span>/5</span>
-<span style="color:#00f3ff" id="drawInfo"></span>
-</div>
-<div class="cards-container" id="handBox"></div>
-</div>
-<div class="waiting-overlay" id="waitOverlay">
-<div class="spinner"></div>
-<div style="font-size:1.2em">等待对手...</div>
-</div>
-<div class="auto-end" id="autoEndMsg">
-<div style="font-size:1.5em;color:#00f3ff">⏭️ 回合结束</div>
-<div style="margin-top:10px;font-size:0.9em">抽1张卡 → 对手回合</div>
-</div>
-</div>
-<script>
-const CARD_DB={
-'NFC-001':{name:'火球术',type:'attack',cost:1,power:15,icon:'🔥'},
-'NFC-002':{name:'冰冻箭',type:'attack',cost:1,power:12,icon:'❄️'},
-'NFC-003':{name:'治愈之光',type:'heal',cost:1,power:20,icon:'💚'},
-'NFC-004':{name:'雷霆斩',type:'attack',cost:1,power:25,icon:'⚡'},
-'NFC-005':{name:'圣盾术',type:'defense',cost:1,power:20,icon:'🛡️'},
-'NFC-006':{name:'暗影突袭',type:'attack',cost:1,power:30,icon:'🗡️'},
-'NFC-007':{name:'生命之泉',type:'heal',cost:1,power:35,icon:'💙'},
-'NFC-008':{name:'毁灭风暴',type:'attack',cost:1,power:40,icon:'🌪️'}
-};
+--- 第1段结束 (59 行) ---<div id="gamePanel" class="hidden bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+            <div id="playersBar" class="flex justify-center gap-2 mb-4 flex-wrap"></div>
 
-const net={
-peer:null,conn:null,isHost:false,roomCode:'',
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="text-center">
+                    <h3 class="text-lg mb-2 text-purple-200">牌堆 (<span id="deckCount">0</span>)</h3>
+                    <div id="deckPile" class="relative w-32 h-44 mx-auto hidden-card rounded-xl border-4 border-white/30 cursor-pointer nfc-pulse" onclick="drawCard()">
+                        <div class="absolute inset-0 flex items-center justify-center text-4xl">🎴</div>
+                        <div class="absolute bottom-2 w-full text-center text-xs">点击抽卡</div>
+                    </div>
+                </div>
 
-createRoom(){
-this.isHost=true;
-this.roomCode=Math.random().toString(36).substring(2,8).toUpperCase();
-document.getElementById('roomCode').textContent=this.roomCode;
-document.getElementById('roomDisplay').style.display='block';
-document.getElementById('createBtn').disabled=true;
+                <div class="text-center flex flex-col justify-center">
+                    <div id="turnIndicator" class="text-2xl font-bold mb-2 text-yellow-300">等待开始...</div>
+                    <div id="actionButtons" class="flex flex-wrap justify-center gap-2 hidden">
+                        <button onclick="playSelectedCards()" id="btnPlay" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-bold hidden">出牌</button>
+                        <button onclick="endTurn()" id="btnEndTurn" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-bold hidden">结束回合</button>
+                        <button onclick="openNFCModal()" class="bg-purple-500 hover:bg-purple-600 px-4 py-2 rounded-lg font-bold nfc-pulse">📱 NFC扫描</button>
+                    </div>
+                    <div id="bombModal" class="hidden mt-4 p-4 bg-red-600/90 rounded-xl animate-pulse">
+                        <p class="text-2xl mb-2">💣 炸弹！</p>
+                        <div id="defuseOptions" class="flex gap-2 justify-center">
+                            <button onclick="useDefuse()" class="bg-green-500 px-4 py-2 rounded">使用拆解</button>
+                            <button onclick="acceptDeath()" class="bg-gray-700 px-4 py-2 rounded">接受命运</button>
+                        </div>
+                        <div id="bombPlacement" class="hidden mt-2">
+                            <p>将炸弹放回位置 (1-<span id="maxPos">1</span>):</p>
+                            <input type="number" id="bombPos" min="1" value="1" class="w-20 px-2 py-1 rounded text-black text-center">
+                            <button onclick="placeBombBack()" class="bg-yellow-500 px-3 py-1 rounded ml-2">确认</button>
+                        </div>
+                    </div>
+                </div>
 
-try{
-this.peer=new Peer(this.roomCode,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
-this.peer.on('open',()=>{
-document.getElementById('hostStatus').textContent='房间已创建，等待对手...';
-});
-this.peer.on('connection',(conn)=>{
-this.conn=conn;this.setupConn();
-document.getElementById('hostStatus').textContent='对手已连接！开始战斗...';
-document.getElementById('hostStatus').className='status-box status-ok';
-setTimeout(()=>game.startPvp(true),1000);
-});
-this.peer.on('error',()=>{
-document.getElementById('hostStatus').style.display='none';
-document.getElementById('hostError').style.display='block';
-document.getElementById('createBtn').disabled=false;
-});
-}catch(e){
-alert('创建失败：'+e.message);
-}
-},
+                <div class="text-center">
+                    <h3 class="text-lg mb-2 text-purple-200">弃牌堆 (<span id="discardCount">0</span>)</h3>
+                    <div id="discardPile" class="w-32 h-44 mx-auto bg-gray-700 rounded-xl border-4 border-white/30 flex items-center justify-center text-4xl relative overflow-hidden">
+                        <span id="topDiscard">🗑️</span>
+                    </div>
+                    <button onclick="viewDiscardPile()" class="mt-2 text-xs underline text-purple-300">查看弃牌堆</button>
+                </div>
+            </div>
 
-joinRoom(){
-const code=document.getElementById('joinInput').value.toUpperCase().trim();
-if(code.length<4){alert('请输入有效房间代码');return}
-this.isHost=false;this.roomCode=code;
-document.getElementById('joinBtn').disabled=true;
-const status=document.getElementById('joinStatus');
-status.style.display='block';status.textContent='正在连接...';status.className='status-box status-wait';
+            <div class="bg-black/30 rounded-lg p-3 mb-4">
+                <h4 class="text-sm text-yellow-300 mb-1">📜 游戏记录</h4>
+                <div id="gameLog" class="text-sm space-y-1 text-gray-300"></div>
+            </div>
 
-try{
-this.peer=new Peer(null,{host:'0.peerjs.com',port:443,secure:true,path:'/'});
-this.peer.on('open',()=>{
-this.conn=this.peer.connect(code,{reliable:true});
-this.setupConn();
-});
-this.peer.on('error',(err)=>{
-status.textContent='连接失败：'+err.message;
-status.className='status-box status-err';
-document.getElementById('joinBtn').disabled=false;
-});
-}catch(e){
-alert('连接错误：'+e.message);
-}
-},
+            <div>
+                <h3 class="text-lg mb-2 text-center text-yellow-300">你的手牌 (<span id="handCount">0</span>)</h3>
+                <div id="handArea" class="flex flex-wrap justify-center gap-2 min-h-[120px]"></div>
+                <p class="text-center text-xs text-gray-400 mt-2">点击选择卡牌，相同卡牌可选多张组合打出</p>
+            </div>
+        </div>
 
-setupConn(){
-if(!this.conn)return;
-this.conn.on('open',()=>{
-document.getElementById('joinStatus').textContent='已连接！开始战斗...';
-document.getElementById('joinStatus').className='status-box status-ok';
-if(!this.isHost)setTimeout(()=>game.startPvp(false),500);
-this.startPing();
-});
-this.conn.on('data',(data)=>{
-if(data.type==='ping')this.conn.send({type:'pong',time:data.time});
-else if(data.type==='pong'){
-const ping=Date.now()-data.time;
-document.getElementById('pingText').textContent='延迟:'+ping+'ms';
-}
-else if(data.type==='action')game.handleAction(data.data);
-else if(data.type==='end')game.handleEndTurn();
-});
-this.conn.on('close',()=>{alert('对手断开连接');location.reload();});
-},
+        <div id="nfcModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div class="bg-gray-800 rounded-2xl p-6 max-w-sm w-full mx-4 border-2 border-purple-500">
+                <h3 class="text-2xl font-bold mb-4 text-center text-purple-300">📱 NFC扫描</h3>
+                <div id="nfcStatus" class="text-center mb-4">
+                    <div class="w-24 h-24 mx-auto bg-purple-600/30 rounded-full flex items-center justify-center nfc-pulse mb-2">
+                        <span class="text-4xl">📡</span>
+                    </div>
+                    <p>请靠近NFC卡片...</p>
+                </div>
+                <div class="space-y-2">
+                    <button onclick="startNFCSimulation()" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded">模拟扫描</button>
+                    <button onclick="closeNFCModal()" class="w-full bg-gray-600 hover:bg-gray-700 py-2 rounded">取消</button>
+                </div>
+                <div id="nfcResult" class="mt-4 hidden p-3 bg-green-600/30 rounded text-center"></div>
+            </div>
+        </div>
+    </div>
 
-send(data){if(this.conn&&this.conn.open)this.conn.send(data)},
-startPing(){setInterval(()=>this.send({type:'ping',time:Date.now()}),2000)},
-copyCode(){
-const code=this.roomCode;
-if(navigator.clipboard)navigator.clipboard.writeText(code).then(()=>alert('已复制：'+code));
-else prompt('复制此代码：',code);
-}
-};
-const game={
-mode:'local',
-isMyTurn:true,
-actionPoints:1,
-maxActionPoints:1,
-maxHandSize:5,
-hasAttackedThisTurn:false,
-p1:{hp:100,hand:[]},
-p2:{hp:100},
-collection:new Set(['NFC-001','NFC-002','NFC-003','NFC-004','NFC-005']),
 
-showScreen(id){
-document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-document.getElementById(id).classList.add('active');
-},
+--- 第2段结束 (72 行) ---<script>
+        const CARD_TYPES = {
+            EXPLODING: { id: 'EXP', name: '炸弹猫', emoji: '💣', color: 'bg-red-600', desc: '抽到即爆炸！' },
+            DEFUSE: { id: 'DEF', name: '拆解', emoji: '🛠️', color: 'bg-green-600', desc: '解除炸弹' },
+            ATTACK: { id: 'ATK', name: '攻击', emoji: '⚔️', color: 'bg-orange-600', desc: '下家连抽2回合' },
+            SKIP: { id: 'SKP', name: '跳过', emoji: '⏭️', color: 'bg-blue-600', desc: '跳过抽牌' },
+            FAVOR: { id: 'FAV', name: '索要', emoji: '🙏', color: 'bg-purple-600', desc: '指定玩家给你1张牌' },
+            SHUFFLE: { id: 'SHF', name: '洗牌', emoji: '🔀', color: 'bg-yellow-600', desc: '重新洗牌' },
+            FUTURE: { id: 'FUT', name: '预见', emoji: '🔮', color: 'bg-pink-600', desc: '查看牌堆顶3张' },
+            NOPE: { id: 'NOP', name: '否决', emoji: '🚫', color: 'bg-gray-700', desc: '阻止任何动作' },
+            DRAW_BOTTOM: { id: 'BOT', name: '抽底', emoji: '⬇️', color: 'bg-indigo-600', desc: '从牌堆底抽牌' },
+            REVERSE: { id: 'REV', name: '转向', emoji: '🔃', color: 'bg-teal-600', desc: '反转出牌顺序' },
+            CAT_TACO: { id: 'CTA', name: '玉米卷猫', emoji: '🌮', color: 'bg-red-500', desc: '2张相同偷1张，3张要指定牌，5张不同从弃牌堆拿1张' },
+            CAT_WATERMELON: { id: 'CWA', name: '西瓜猫', emoji: '🍉', color: 'bg-green-500', desc: '2张相同偷1张，3张要指定牌，5张不同从弃牌堆拿1张' },
+            CAT_POTATO: { id: 'CPO', name: '土豆猫', emoji: '🥔', color: 'bg-yellow-700', desc: '2张相同偷1张，3张要指定牌，5张不同从弃牌堆拿1张' },
+            CAT_BEARD: { id: 'CBE', name: '胡子猫', emoji: '🧔', color: 'bg-gray-600', desc: '2张相同偷1张，3张要指定牌，5张不同从弃牌堆拿1张' },
+            CAT_RAINBOW: { id: 'CRA', name: '彩虹猫', emoji: '🌈', color: 'bg-purple-500', desc: '2张相同偷1张，3张要指定牌，5张不同从弃牌堆拿1张' }
+        };
 
-drawCard(){
-if(this.p1.hand.length>=this.maxHandSize){
-this.log('⚠️ 手牌已满(5张)，无法抽卡');
-return null;
-}
-const deck=Array.from(this.collection);
-const cardId=deck[Math.floor(Math.random()*deck.length)];
-const card={...CARD_DB[cardId],uid:Date.now()};
-this.p1.hand.push(card);
-this.log('🎴 抽卡：获得【'+card.name+'】');
-return card;
-},
+        function getDeckConfig(playerCount) {
+            return {
+                exploding: Math.max(1, playerCount - 1),
+                defuse: playerCount + 2,
+                attack: 4, skip: 4, favor: 4, shuffle: 4, future: 5, nope: 5, drawBottom: 4, reverse: 4, catCards: 4
+            };
+        }
 
-startLocal(){
-this.mode='local';
-this.p1.hp=100;this.p2.hp=100;this.p1.hand=[];
-this.log('🎴 游戏开始！初始抽2张卡');
-this.drawCard();this.drawCard();
-this.startTurn();
-this.showScreen('gameScreen');
-document.getElementById('waitOverlay').style.display='none';
-},
+        let game = { roomId: null, playerId: null, playerName: '', players: [], deck: [], discard: [], currentPlayerIndex: 0, direction: 1, turnCount: 0, attacksPending: 0, selectedCards: [], myHand: [], gameStarted: false, pendingBomb: null };
+        let firebaseApp = null, dbRef = null, isHost = false;
 
-startPvp(isHost){
-this.mode='pvp';
-this.p1.hp=100;this.p2.hp=100;this.p1.hand=[];
-this.isMyTurn=isHost;
-this.log('🎴 对战开始！初始抽2张卡');
-this.drawCard();this.drawCard();
-this.startTurn();
-this.showScreen('gameScreen');
-if(!this.isMyTurn){
-document.getElementById('waitOverlay').style.display='flex';
-}
-},
+        function generateRoomCode() { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
+        function shuffleArray(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+        function log(msg) { const logDiv = document.getElementById('gameLog'); const entry = document.createElement('div'); entry.innerHTML = `<span class="text-yellow-400">[${new Date().toLocaleTimeString()}]</span> ${msg}`; logDiv.appendChild(entry); logDiv.scrollTop = logDiv.scrollHeight; }
 
-startTurn(){
-this.actionPoints=this.maxActionPoints;
-this.hasAttackedThisTurn=false;
-setTimeout(()=>{
-this.drawCard();
-this.updateUI();
-},500);
-},
+        function initFirebase() {
+            const apiKey = document.getElementById('fbApiKey').value.trim();
+            const dbUrl = document.getElementById('fbDbUrl').value.trim();
+            if (!apiKey) { alert('请输入Firebase API Key!'); return false; }
+            try { firebaseApp = firebase.initializeApp({ apiKey: apiKey, databaseURL: dbUrl, projectId: "nfc-gane" }); return true; }
+            catch (e) { alert('Firebase初始化失败'); return false; }
+        }
 
-render(){
-const box=document.getElementById('handBox');
-box.innerHTML='';
-document.getElementById('handCount').textContent=this.p1.hand.length;
+        function createRoom() {
+            if (!initFirebase()) return;
+            const name = document.getElementById('playerName').value.trim() || '玩家' + Math.floor(Math.random()*1000);
+            game.playerName = name; game.roomId = generateRoomCode(); game.playerId = Date.now().toString(); isHost = true;
+            dbRef = firebase.database().ref('bombCatRooms/' + game.roomId);
+            const playerData = { id: game.playerId, name: name, handCount: 0, dead: false, isHost: true, ready: false };
+            dbRef.set({ players: { [game.playerId]: playerData }, gameState: 'waiting', created: Date.now() });
+            setupRoomListener(); updateUI(); log(`创建房间: ${game.roomId}`);
+        }
 
-if(this.mode==='pvp'&&!this.isMyTurn){
-box.innerHTML='<div style="color:#888;text-align:center;width:100%;padding:20px">等待对手回合...</div>';
-return;
-}
+        function joinRoom() {
+            if (!initFirebase()) return;
+            const code = prompt('请输入6位房间号:')?.toUpperCase().trim();
+            if (!code || code.length !== 6) { alert('请输入正确的6位房间号!'); return; }
+            const name = document.getElementById('playerName').value.trim() || '玩家' + Math.floor(Math.random()*1000);
+            game.playerName = name; game.roomId = code; game.playerId = Date.now().toString();
+            dbRef = firebase.database().ref('bombCatRooms/' + game.roomId);
+            const playerData = { id: game.playerId, name: name, handCount: 0, dead: false, isHost: false, ready: false };
+            dbRef.child('players/' + game.playerId).set(playerData);
+            setupRoomListener(); updateUI(); log(`加入房间: ${game.roomId}`);
+        }
 
-this.p1.hand.forEach((card,i)=>{
-const div=document.createElement('div');
-const cantAttack=this.hasAttackedThisTurn&&card.type==='attack';
-const disabled=card.cost>this.actionPoints||cantAttack;
+        function setupRoomListener() {
+            dbRef.on('value', (snapshot) => {
+                const data = snapshot.val(); if (!data) return;
+                if (data.players) { game.players = Object.values(data.players); updatePlayerList(); }
+                if (data.gameData) { syncGameData(data.gameData); }
+                document.getElementById('connStatus').textContent = '已连接';
+                document.getElementById('connStatus').className = 'text-green-400';
+                document.getElementById('roomCode').textContent = game.roomId;
+                document.getElementById('playerCount').textContent = game.players.length;
+            });
+        }
 
-div.className='card'+(disabled?' disabled':'')+(cantAttack?' attack-used':'');
-div.innerHTML='<div style="font-size:2em">'+card.icon+'</div><div style="font-size:0.75em">'+card.name+'</div><div style="color:#ff9500;font-weight:bold;font-size:0.9em">'+card.cost+'⚡</div>';
-div.onclick=()=>this.playCard(i);
-box.appendChild(div);
-});
-},
+        function updatePlayerList() {
+            const list = document.getElementById('playerList');
+            list.innerHTML = game.players.map(p => {
+                const isMe = p.id === game.playerId; const status = p.dead ? '💀' : (p.ready ? '✅' : '⏳');
+                return `<span class="px-2 py-1 rounded ${isMe ? 'bg-yellow-600' : 'bg-blue-600'} text-xs">${p.name} ${status}</span>`;
+            }).join('');
+            if (isHost && game.players.length >= 2 && !game.gameStarted) {
+                if (!document.getElementById('startBtn')) {
+                    const btn = document.createElement('button'); btn.id = 'startBtn'; btn.textContent = '开始游戏';
+                    btn.onclick = startGame; btn.className = 'mt-2 w-full bg-red-600 hover:bg-red-700 py-2 rounded font-bold';
+                    list.appendChild(btn);
+                }
+            }
+        }
 
-playCard(idx){
-if(this.mode==='pvp'&&!this.isMyTurn)return;
-const card=this.p1.hand[idx];
+        function syncGameData(data) {
+            game.deck = data.deck || []; game.discard = data.discard || [];
+            game.currentPlayerIndex = data.currentPlayerIndex || 0; game.direction = data.direction || 1;
+            game.attacksPending = data.attacksPending || 0; game.gameStarted = data.gameStarted || false;
+            if (data.playerHands) {
+                Object.keys(data.playerHands).forEach(pid => {
+                    const p = game.players.find(x => x.id === pid); if (p) p.handCount = data.playerHands[pid].length;
+                });
+                if (data.playerHands[game.playerId]) game.myHand = data.playerHands[game.playerId];
+            }
+            if (game.gameStarted) {
+                document.getElementById('lobbyPanel').classList.add('hidden');
+                document.getElementById('gamePanel').classList.remove('hidden');
+            }
+            updateUI();
+        }
 
-if(card.type==='attack'&&this.hasAttackedThisTurn){
-this.log('❌ 本回合已经攻击过了！');
-return;
-}
-if(card.cost>this.actionPoints)return;
 
-// 修复：正确的属性名是 cost，不是 powe-消耗行动点
-this.actionPoints-=card.cost;
+--- 第3段结束 (108 行) ---function startGame() {
+            if (!isHost) return; const playerCount = game.players.length;
+            if (playerCount < 2) { alert('至少需要2名玩家!'); return; }
+            const config = getDeckConfig(playerCount); let deck = [];
+            for (let i = 0; i < config.attack; i++) deck.push(CARD_TYPES.ATTACK);
+            for (let i = 0; i < config.skip; i++) deck.push(CARD_TYPES.SKIP);
+            for (let i = 0; i < config.favor; i++) deck.push(CARD_TYPES.FAVOR);
+            for (let i = 0; i < config.shuffle; i++) deck.push(CARD_TYPES.SHUFFLE);
+            for (let i = 0; i < config.future; i++) deck.push(CARD_TYPES.FUTURE);
+            for (let i = 0; i < config.nope; i++) deck.push(CARD_TYPES.NOPE);
+            for (let i = 0; i < config.drawBottom; i++) deck.push(CARD_TYPES.DRAW_BOTTOM);
+            for (let i = 0; i < config.reverse; i++) deck.push(CARD_TYPES.REVERSE);
+            const cats = [CARD_TYPES.CAT_TACO, CARD_TYPES.CAT_WATERMELON, CARD_TYPES.CAT_POTATO, CARD_TYPES.CAT_BEARD, CARD_TYPES.CAT_RAINBOW];
+            cats.forEach(cat => { for (let i = 0; i < config.catCards; i++) deck.push(cat); });
+            deck = shuffleArray(deck);
+            const playerHands = {};
+            game.players.forEach((p) => {
+                const hand = [];
+                for (let i = 0; i < 7; i++) { if (deck.length > 0) hand.push(deck.pop()); }
+                hand.push(CARD_TYPES.DEFUSE); playerHands[p.id] = hand;
+            });
+            const bombs = []; for (let i = 0; i < config.exploding; i++) bombs.push(CARD_TYPES.EXPLODING);
+            bombs.forEach(bomb => { const pos = Math.floor(Math.random() * (deck.length + 1)); deck.splice(pos, 0, bomb); });
+            const extraDefuses = config.defuse - playerCount;
+            for (let i = 0; i < extraDefuses; i++) { const pos = Math.floor(Math.random() * (deck.length + 1)); deck.splice(pos, 0, CARD_TYPES.DEFUSE); }
+            const gameData = { deck: deck, discard: [], playerHands: playerHands, currentPlayerIndex: 0, direction: 1, attacksPending: 0, gameStarted: true, turnCount: 1, lastAction: null };
+            dbRef.child('gameData').set(gameData); dbRef.child('gameState').set('playing');
+            game.myHand = playerHands[game.playerId] || []; game.gameStarted = true;
+            document.getElementById('lobbyPanel').classList.add('hidden');
+            document.getElementById('gamePanel').classList.remove('hidden');
+            log('游戏开始!每人初始8张牌(含1张拆解)'); updateUI();
+        }
 
-if(card.type==='attack'){
-this.hasAttackedThisTurn=true;
-this.p2.hp=Math.max(0,this.p2.hp-card.power);
-this.log('🔥 使用【'+card.name+'】造成<span class="damage">'+card.power+'</span>伤害');
-if(this.mode==='pvp')net.send({type:'action',data:{t:'atk',dmg:card.power}});
-}else if(card.type==='heal'){
-const heal=Math.min(card.power,100-this.p1.hp);
-this.p1.hp+=heal;
-this.log('💚 恢复<span class="heal">'+heal+'</span>生命');
-if(this.mode==='pvp')net.send({type:'action',data:{t:'heal',val:heal}});
-}else if(card.type==='defense'){
-this.log('🛡️ 获得'+card.power+'点护盾');
-if(this.mode==='pvp')net.send({type:'action',data:{t:'def',val:card.power}});
-}
+        function isMyTurn() { if (!game.players.length) return false; const currentPlayer = game.players[game.currentPlayerIndex]; return currentPlayer && currentPlayer.id === game.playerId && !currentPlayer.dead; }
+        function getCurrentPlayer() { return game.players[game.currentPlayerIndex]; }
+        function getNextPlayerIndex() { let idx = game.currentPlayerIndex; do { idx = (idx + game.direction + game.players.length) % game.players.length; } while (game.players[idx].dead); return idx; }
 
-this.p1.hand.splice(idx,1);
-this.updateUI();
+        function drawCard(fromBottom = false) {
+            if (!isMyTurn()) { log('不是你的回合!'); return; }
+            if (game.deck.length === 0) { log('牌堆已空!'); return; }
+            let card; if (fromBottom) { card = game.deck.shift(); log('从牌堆底抽了一张牌...'); } else { card = game.deck.pop(); }
+            if (card.id === 'EXP') { handleExplodingKitten(card); } else {
+                game.myHand.push(card); log(`抽到: ${card.emoji} ${card.name}`); saveHand();
+                if (game.attacksPending > 0) { game.attacksPending--; if (game.attacksPending > 0) { log(`攻击效果: 还需抽 ${game.attacksPending} 张牌`); setTimeout(() => drawCard(), 1000); return; } }
+                endTurn();
+            } updateUI();
+        }
 
-if(this.p2.hp<=0){
-setTimeout(()=>this.win(),300);
-return;
-}
+        function handleExplodingKitten(bombCard) { log('💣 抽到炸弹猫!'); document.getElementById('bombModal').classList.remove('hidden'); document.getElementById('defuseOptions').classList.remove('hidden'); document.getElementById('bombPlacement').classList.add('hidden'); game.pendingBomb = bombCard; }
 
-if(this.actionPoints<=0){
-setTimeout(()=>this.autoEndTurn(),600);
-}
-},
+        function useDefuse() {
+            const defuseIndex = game.myHand.findIndex(c => c.id === 'DEF');
+            if (defuseIndex === -1) { alert('没有拆解牌!'); return; }
+            const defuseCard = game.myHand.splice(defuseIndex, 1)[0]; game.discard.push(defuseCard); log('使用拆解牌解除炸弹!');
+            document.getElementById('defuseOptions').classList.add('hidden'); document.getElementById('bombPlacement').classList.remove('hidden');
+            document.getElementById('maxPos').textContent = game.deck.length; document.getElementById('bombPos').max = game.deck.length;
+            document.getElementById('bombPos').value = Math.floor(Math.random() * (game.deck.length + 1)) + 1;
+            saveHand(); saveGameData();
+        }
 
-autoEndTurn(){
-const msg=document.getElementById('autoEndMsg');
-msg.classList.add('show');
-setTimeout(()=>{
-msg.classList.remove('show');
-if(this.mode==='local'){
-this.enemyTurn();
-}else{
-this.endPvpTurn();
-}
-},1000);
-},
+        function acceptDeath() {
+            log('💀 炸弹爆炸!玩家出局!'); game.pendingBomb = null; document.getElementById('bombModal').classList.add('hidden');
+            const me = game.players.find(p => p.id === game.playerId); if (me) { me.dead = true; me.handCount = 0; }
+            game.discard = game.discard.concat(game.myHand); game.myHand = [];
+            saveHand(); savePlayerStatus(); saveGameData();
+            if (!checkGameEnd()) { endTurn(); }
+        }
 
-handleAction(data){
-if(data.t==='atk'){
-this.p1.hp-=data.dmg;
-this.log('💥 对手造成<span class="damage">'+data.dmg+'</span>伤害');
-}else if(data.t==='heal'){
-this.p2.hp=Math.min(100,this.p2.hp+data.val);
-this.log('💙 对手恢复生命');
-}else if(data.t==='def'){
-this.log('🛡️ 对手获得护盾');
-}
-this.updateUI();
-if(this.p1.hp<=0)this.lose();
-},
+        function placeBombBack() {
+            if (!game.pendingBomb) return; const pos = parseInt(document.getElementById('bombPos').value) - 1;
+            const clampedPos = Math.max(0, Math.min(pos, game.deck.length)); game.deck.splice(clampedPos, 0, game.pendingBomb);
+            log(`将炸弹秘密放回牌堆第 ${clampedPos + 1} 张位置`); game.pendingBomb = null; document.getElementById('bombModal').classList.add('hidden');
+            saveGameData();
+            if (game.attacksPending > 0) { game.attacksPending--; if (game.attacksPending > 0) { log(`攻击效果: 还需抽 ${game.attacksPending} 张牌`); setTimeout(() => { document.getElementById('deckPile').click(); }, 1000); return; } }
+            endTurn();
+        }
 
-endPvpTurn(){
-this.isMyTurn=false;
-document.getElementById('waitOverlay').style.display='flex';
-net.send({type:'end'});
-this.log('⏭️ 回合结束，等待对手...');
-},
+        function playSelectedCards() {
+            if (!isMyTurn() || game.selectedCards.length === 0) return;
+            const selected = game.selectedCards.map(idx => game.myHand[idx]).filter(c => c); if (selected.length === 0) return;
+            if (selected.length === 2 && selected[0].id === selected[1].id) { playTwoOfAKind(selected); return; }
+            else if (selected.length === 3 && selected[0].id === selected[1].id && selected[1].id === selected[2].id) { playThreeOfAKind(selected); return; }
+            else if (selected.length === 5 && new Set(selected.map(c => c.id)).size === 5) { playFiveDifferent(selected); return; }
+            if (selected.length === 1) { playSingleCard(selected[0]); } else { alert('无效组合!2张相同/3张相同/5张不同'); }
+        }
 
-handleEndTurn(){
-this.isMyTurn=true;
-document.getElementById('waitOverlay').style.display='none';
-this.startTurn();
-this.log('🎮 对手回合结束！抽1张卡并开始你的回合');
-this.updateUI();
-},
+        function playSingleCard(card) {
+            const idx = game.myHand.indexOf(card); if (idx > -1) game.myHand.splice(idx, 1); game.discard.push(card); game.selectedCards = [];
+            log(`打出 ${card.emoji} ${card.name}`);
+            switch(card.id) {
+                case 'ATK': game.attacksPending += 2; log('发起攻击!下家需连续抽2回合'); endTurn(true); break;
+                case 'SKP': log('跳过抽牌'); if (game.attacksPending > 0) { game.attacksPending--; if (game.attacksPending > 0) { log(`攻击效果: 还需处理 ${game.attacksPending} 回合`); endTurn(); return; } } endTurn(true); break;
+                case 'SHF': game.deck = shuffleArray(game.deck); log('重新洗牌!'); break;
+                case 'FUT': viewFuture(); break;
+                case 'FAV': playFavor(); break;
+                case 'NOP': log('否决牌需要在其他玩家行动时使用'); game.discard.pop(); game.myHand.push(card); break;
+                case 'BOT': drawCard(true); return;
+                case 'REV': game.direction *= -1; log(`出牌顺序反转!当前为${game.direction === 1 ? '顺时针' : '逆时针'}`); endTurn(true); break;
+                default: if (card.id.startsWith('C')) { log('猫咪牌需要组合使用(2/3/5张)'); game.discard.pop(); game.myHand.push(card); game.selectedCards = [game.myHand.length - 1]; updateUI(); return; }
+            } saveHand(); saveGameData(); updateUI();
+        }
 
-enemyTurn(){
-this.log('⏭️ 敌人回合...');
-setTimeout(()=>{
-this.log('👹 敌人抽了1张卡');
-const dmg=Math.floor(Math.random()*15)+10;
-this.p1.hp-=dmg;
-this.log('👹 敌人造成<span class="damage">'+dmg+'</span>伤害');
-setTimeout(()=>{
-this.startTurn();
-this.log('🎮 你的回合！抽1张卡');
-this.updateUI();
-},1000);
-},1500);
-},
+        function playTwoOfAKind(cards) { const targetId = selectTargetPlayer('选择要偷牌的玩家:'); if (!targetId) return; removeCardsFromHand(cards); log(`使用2张${cards[0].name}偷取手牌!`); requestStealCard(targetId, 'random'); }
+        function playThreeOfAKind(cards) { const targetId = selectTargetPlayer('选择要指定要牌的玩家:'); if (!targetId) return; const wantedCard = prompt('输入你想要的卡牌名称(如:攻击/拆解/跳过):'); if (!wantedCard) return; removeCardsFromHand(cards); log(`使用3张${cards[0].name}索要${wantedCard}!`); requestStealCard(targetId, wantedCard); }
+        function playFiveDifferent(cards) { if (game.discard.length === 0) { alert('弃牌堆为空!'); return; } removeCardsFromHand(cards); viewDiscardPile(true); }
+        function removeCardsFromHand(cards) { cards.forEach(card => { const idx = game.myHand.indexOf(card); if (idx > -1) { game.myHand.splice(idx, 1); game.discard.push(card); } }); game.selectedCards = []; saveHand(); saveGameData(); updateUI(); }
+        function viewFuture() { if (game.deck.length === 0) { alert('牌堆为空!'); return; } const top3 = game.deck.slice(-3).reverse(); let msg = '🔮 牌堆顶的3张牌:
+'; top3.forEach((card, i) => { msg += `${i+1}. ${card.emoji} ${card.name}
+`; }); alert(msg); log('使用了预见未来'); }
 
-updateUI(){
-document.getElementById('p1Hp').style.width=this.p1.hp+'%';
-document.getElementById('p1HpText').textContent=this.p1.hp;
-document.getElementById('p2Hp').style.width=this.p2.hp+'%';
-document.getElementById('p2HpText').textContent=this.p2.hp;
-document.getElementById('apText').textContent=this.actionPoints;
 
-const atkStatus=document.getElementById('attackStatus');
-if(this.hasAttackedThisTurn){
-atkStatus.textContent='已攻击';
-atkStatus.style.color='#888';
-}else{
-atkStatus.textContent='可攻击';
-atkStatus.style.color='#ff6b6b';
-}
-
-document.getElementById('turnText').textContent=this.isMyTurn?'🎮 你的回合':'⏳ 对手回合';
-document.getElementById('p1Box').classList.toggle('active',this.isMyTurn);
-document.getElementById('p2Box').classList.toggle('active',!this.isMyTurn);
-this.render();
-},
-
-log(msg){
-const div=document.getElementById('gameLog');
-const entry=document.createElement('div');
-entry.className='log-entry';
-entry.innerHTML=msg;
-div.appendChild(entry);
-div.scrollTop=div.scrollHeight;
-},
-
-win(){setTimeout(()=>{alert('🏆 胜利！');this.showScreen('mainMenu')},500)},
-lose(){setTimeout(()=>{alert('💀 失败');this.showScreen('mainMenu')},500)},
-showCollection(){this.showScreen('mainMenu');alert('卡册：拥有'+this.collection.size+'张卡牌')}
-};
-
-document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
-</script>
+--- 第4段结束 (110 行) ---function viewDiscardPile(canPick = false) { if (game.discard.length === 0) { alert('弃牌堆为空'); return; } const cards = game.discard.slice(-10); let html = '<div class="max-h-60 overflow-y-auto"><h3 class="mb-2">弃牌堆</h3><div class="grid grid-cols-5 gap-2">'; cards.forEach((card, idx) => { html += `<div class="p-2 ${card.color} rounded text-center" onclick="${canPick ? `pickFromDiscard(${idx})` : ''}">${card.emoji}</div>`; }); html += '</div></div>'; const modal = document.createElement('div'); modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50'; modal.innerHTML = `<div class="bg-gray-800 p-4 rounded-xl max-w-md w-full mx-4">${html}<button onclick="this.parentElement.parentElement.remove()" class="mt-4 w-full bg-gray-600 py-2 rounded">关闭</button></div>`; document.body.appendChild(modal); }
+        function pickFromDiscard(idx) { const card = game.discard.splice(game.discard.length - 1 - idx, 1)[0]; game.myHand.push(card); log(`从弃牌堆回收了 ${card.emoji} ${card.name}`); saveHand(); saveGameData(); updateUI(); document.querySelector('.fixed').remove(); }
+        function playFavor() { const targetId = selectTargetPlayer('选择要索要手牌的玩家:'); if (!targetId) return; dbRef.child('requests/' + targetId).set({ type: 'favor', from: game.playerId, fromName: game.playerName, timestamp: Date.now() }); log(`向 ${game.players.find(p=>p.id===targetId)?.name} 索要手牌`); }
+        function selectTargetPlayer(msg) { const alivePlayers = game.players.filter(p => !p.dead && p.id !== game.playerId); if (alivePlayers.length === 0) { alert('没有其他存活玩家!'); return null; } const choice = prompt(msg + '\n' + alivePlayers.map((p, i) => `${i+1}. ${p.name}`).join('\n') + '\n\n输入编号:'); const idx = parseInt(choice) - 1; if (idx >= 0 && idx < alivePlayers.length) return alivePlayers[idx].id; return null; }
+        function requestStealCard(targetId, type) { dbRef.child('requests/' + targetId).set({ type: 'steal', stealType: type, from: game.playerId, fromName: game.playerName, timestamp: Date.now() }); }
+        function endTurn(skipDraw = false) { if (!isMyTurn()) return; saveGameData(); game.currentPlayerIndex = getNextPlayerIndex(); game.turnCount++; const nextPlayer = game.players[game.currentPlayerIndex]; log(`回合结束，轮到 ${nextPlayer?.name || '未知'}`); saveGameData(); updateUI(); }
+        function checkGameEnd() { const alivePlayers = game.players.filter(p => !p.dead); if (alivePlayers.length <= 1) { const winner = alivePlayers[0]; if (winner) { setTimeout(() => { alert(`🎉 游戏结束! 获胜者是: ${winner.name}`); log(`游戏结束!获胜者: ${winner.name}`); }, 500); } return true; } return false; }
+        function saveHand() { if (!dbRef) return; dbRef.child('gameData/playerHands/' + game.playerId).set(game.myHand); const me = game.players.find(p => p.id === game.playerId); if (me) me.handCount = game.myHand.length; }
+        function saveGameData() { if (!isHost || !dbRef) return; dbRef.child('gameData').update({ deck: game.deck, discard: game.discard, currentPlayerIndex: game.currentPlayerIndex, direction: game.direction, attacksPending: game.attacksPending, turnCount: game.turnCount }); }
+        function savePlayerStatus() { if (!dbRef) return; dbRef.child('players/' + game.playerId).update({ dead: game.players.find(p => p.id === game.playerId)?.dead, handCount: game.myHand.length }); }
+        function openNFCModal() { document.getElementById('nfcModal').classList.remove('hidden'); document.getElementById('nfcResult').classList.add('hidden'); if ('NDEFReader' in window) { startRealNFC(); } }
+        function closeNFCModal() { document.getElementById('nfcModal').classList.add('hidden'); }
+        async function startRealNFC() { try { const ndef = new NDEFReader(); await ndef.scan(); ndef.addEventListener("reading", ({ serialNumber }) => { handleNFCDetection(serialNumber); }); } catch (error) { console.log('NFC error:', error); } }
+        function startNFCSimulation() { const allCards = Object.values(CARD_TYPES).filter(c => c.id !== 'EXP'); const randomCard = allCards[Math.floor(Math.random() * allCards.length)]; const resultDiv = document.getElementById('nfcResult'); resultDiv.classList.remove('hidden'); resultDiv.innerHTML = `扫描成功!<br>${randomCard.emoji} <b>${randomCard.name}</b>`; if (isMyTurn()) { setTimeout(() => { if (confirm(`要将 ${randomCard.name} 加入手牌吗?`)) { game.myHand.push(randomCard); saveHand(); updateUI(); log(`NFC扫描获得: ${randomCard.emoji} ${randomCard.name}`); } closeNFCModal(); }, 1000); } else { setTimeout(closeNFCModal, 2000); } }
+        function handleNFCDetection(cardId) { const cardMap = JSON.parse(localStorage.getItem('nfcCardMap') || '{}'); const cardType = cardMap[cardId]; if (cardType && CARD_TYPES[cardType]) { const card = CARD_TYPES[cardType]; document.getElementById('nfcResult').innerHTML = `识别到: ${card.emoji} ${card.name}`; document.getElementById('nfcResult').classList.remove('hidden'); if (isMyTurn() && confirm(`使用 ${card.name}?`)) { const handIdx = game.myHand.findIndex(c => c.id === card.id); if (handIdx > -1) { game.selectedCards = [handIdx]; playSelectedCards(); } else { game.myHand.push(card); saveHand(); updateUI(); } } } else { const bind = confirm(`未识别的NFC标签: ${cardId}\n要绑定为某种卡牌吗?`); if (bind) { const type = prompt('输入卡牌类型(如:ATTACK/SKIP/DEFUSE等):'); if (type && CARD_TYPES[type]) { cardMap[cardId] = type; localStorage.setItem('nfcCardMap', JSON.stringify(cardMap)); alert(`已绑定为: ${CARD_TYPES[type].name}`); } } } }
+        function updateUI() {
+            if (!game.gameStarted) return;
+            const playersBar = document.getElementById('playersBar');
+            playersBar.innerHTML = game.players.map((p, idx) => {
+                const isCurrent = idx === game.currentPlayerIndex; const isMe = p.id === game.playerId; const status = p.dead ? '💀' : (isCurrent ? '➡️' : '');
+                return `<div class="player-avatar ${isCurrent ? 'active' : ''} ${p.dead ? 'dead' : ''} bg-white/10 rounded-lg p-2 text-center min-w-[80px]"><div class="text-2xl">${isMe ? '😺' : '🐱'}</div><div class="text-xs ${isMe ? 'text-yellow-300 font-bold' : ''}">${p.name} ${status}</div><div class="text-xs text-gray-400">${p.handCount}张</div></div>`;
+            }).join('');
+            document.getElementById('deckCount').textContent = game.deck.length; document.getElementById('discardCount').textContent = game.discard.length;
+            const topDiscard = game.discard[game.discard.length - 1]; document.getElementById('topDiscard').textContent = topDiscard ? topDiscard.emoji : '🗑️';
+            if (topDiscard) document.getElementById('discardPile').className = `w-32 h-44 mx-auto ${topDiscard.color} rounded-xl border-4 border-white/30 flex items-center justify-center text-4xl relative overflow-hidden`;
+            const currentPlayer = getCurrentPlayer();
+            if (currentPlayer) {
+                const myTurn = currentPlayer.id === game.playerId;
+                document.getElementById('turnIndicator').innerHTML = `回合 ${game.turnCount}: <span class="${myTurn ? 'text-green-400' : 'text-white'}">${currentPlayer.name}</span> ${myTurn ? '(你的回合)' : ''}`;
+                const actionBtns = document.getElementById('actionButtons');
+                if (myTurn && !currentPlayer.dead) { actionBtns.classList.remove('hidden'); document.getElementById('btnEndTurn').classList.remove('hidden'); document.getElementById('btnPlay').classList.toggle('hidden', game.selectedCards.length === 0); }
+                else { actionBtns.classList.add('hidden'); }
+            } updateHandDisplay();
+        }
+        function updateHandDisplay() { const handArea = document.getElementById('handArea'); document.getElementById('handCount').textContent = game.myHand.length; handArea.innerHTML = game.myHand.map((card, idx) => { const isSelected = game.selectedCards.includes(idx); return `<div onclick="toggleCardSelection(${idx})" class="hand-card ${card.color} ${isSelected ? 'selected' : ''} w-20 h-28 rounded-lg border-2 border-white/50 flex flex-col items-center justify-center p-1 select-none"><div class="text-2xl mb-1">${card.emoji}</div><div class="text-xs text-center">${card.name}</div></div>`; }).join(''); }
+        function toggleCardSelection(idx) { if (!isMyTurn()) return; const pos = game.selectedCards.indexOf(idx); if (pos > -1) game.selectedCards.splice(pos, 1); else game.selectedCards.push(idx); updateHandDisplay(); updateUI(); }
+        function setupRequestListener() { if (!dbRef || !game.playerId) return; dbRef.child('requests/' + game.playerId).on('value', (snapshot) => { const req = snapshot.val(); if (!req) return; if (req.type === 'favor') handleFavorRequest(req); else if (req.type === 'steal') handleStealRequest(req); snapshot.ref.remove(); }); }
+        function handleFavorRequest(req) { if (game.myHand.length === 0) { log(`${req.fromName} 向你索要手牌，但你没有手牌`); return; } const cardNames = game.myHand.map((c, i) => `${i+1}. ${c.emoji}${c.name}`).join('\n'); const choice = prompt(`${req.fromName} 向你索要一张手牌，选择给哪张:\n${cardNames}\n\n输入编号:`); const idx = parseInt(choice) - 1; if (idx >= 0 && idx < game.myHand.length) { const card = game.myHand.splice(idx, 1)[0]; dbRef.child('transfers/' + req.from).push({ card: card, from: game.playerId, timestamp: Date.now() }); log(`给了 ${req.fromName} 一张 ${card.name}`); saveHand(); updateUI(); } }
+        function handleStealRequest(req) { if (game.myHand.length === 0) return; let stolenCard; if (req.stealType === 'random') { const idx = Math.floor(Math.random() * game.myHand.length); stolenCard = game.myHand.splice(idx, 1)[0]; } else { const targetType = Object.values(CARD_TYPES).find(c => c.name.includes(req.stealType)); if (targetType) { const idx = game.myHand.findIndex(c => c.id === targetType.id); if (idx > -1) stolenCard = game.myHand.splice(idx, 1)[0]; else { const idx = Math.floor(Math.random() * game.myHand.length); stolenCard = game.myHand.splice(idx, 1)[0]; } } } if (stolenCard) { dbRef.child('transfers/' + req.from).push({ card: stolenCard, from: game.playerId, timestamp: Date.now() }); log(`${req.f        if (stolenCard) { dbRef.child('transfers/' + req.from).push({ card: stolenCard, from: game.playerId, timestamp: Date.now() }); log(`${req.fromName} 偷走了你的 ${stolenCard.name}!`); saveHand(); updateUI(); } }
+        function setupTransferListener() { if (!dbRef || !game.playerId) return; dbRef.child('transfers/' + game.playerId).on('child_added', (snapshot) => { const transfer = snapshot.val(); if (transfer && transfer.card) { game.myHand.push(transfer.card); log(`收到来自 ${game.players.find(p=>p.id===transfer.from)?.name || '未知'} 的牌: ${transfer.card.emoji} ${transfer.card.name}`); saveHand(); updateUI(); } snapshot.ref.remove(); }); }
+        setTimeout(() => { setupRequestListener(); setupTransferListener(); }, 2000);
+    </script>
 </body>
 </html>
