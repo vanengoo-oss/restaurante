@@ -42,8 +42,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .log-entry{margin:3px 0;padding:5px;border-left:3px solid #00f3ff;padding-left:8px}
 .damage{color:#ff6b6b;font-weight:bold}
 .heal{color:#51cf66;font-weight:bold}
-.draw-anim{animation:drawCard 0.5s ease-out}
-@keyframes drawCard{0%{transform:translateX(-50px);opacity:0}100%{transform:translateX(0);opacity:1}}
 .auto-end{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:20px;border-radius:15px;z-index:1000;text-align:center;border:2px solid #00f3ff}
 .auto-end.show{display:block}
 .waiting-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:500;flex-direction:column;align-items:center;justify-content:center}
@@ -257,7 +255,6 @@ return card;
 startLocal(){
 this.mode='local';
 this.p1.hp=100;this.p2.hp=100;this.p1.hand=[];
-// 初始抽2张
 this.log('🎴 游戏开始！初始抽2张卡');
 this.drawCard();this.drawCard();
 this.startTurn();
@@ -269,7 +266,6 @@ startPvp(isHost){
 this.mode='pvp';
 this.p1.hp=100;this.p2.hp=100;this.p1.hand=[];
 this.isMyTurn=isHost;
-// 初始抽2张
 this.log('🎴 对战开始！初始抽2张卡');
 this.drawCard();this.drawCard();
 this.startTurn();
@@ -280,10 +276,8 @@ document.getElementById('waitOverlay').style.display='flex';
 },
 
 startTurn(){
-// 回合开始：重置状态
 this.actionPoints=this.maxActionPoints;
 this.hasAttackedThisTurn=false;
-// 抽1张卡（回合开始抽卡）
 setTimeout(()=>{
 this.drawCard();
 this.updateUI();
@@ -316,15 +310,14 @@ playCard(idx){
 if(this.mode==='pvp'&&!this.isMyTurn)return;
 const card=this.p1.hand[idx];
 
-// 检查攻击限制
 if(card.type==='attack'&&this.hasAttackedThisTurn){
 this.log('❌ 本回合已经攻击过了！');
 return;
 }
 if(card.cost>this.actionPoints)return;
 
-// 执行出牌
-this.actionPoints-=card.powe-消耗行动点;
+// 修复：正确的属性名是 cost，不是 powe-消耗行动点
+this.actionPoints-=card.cost;
 
 if(card.type==='attack'){
 this.hasAttackedThisTurn=true;
@@ -341,17 +334,14 @@ this.log('🛡️ 获得'+card.power+'点护盾');
 if(this.mode==='pvp')net.send({type:'action',data:{t:'def',val:card.power}});
 }
 
-// 移除打出的牌
 this.p1.hand.splice(idx,1);
 this.updateUI();
 
-// 检查胜利
 if(this.p2.hp<=0){
 setTimeout(()=>this.win(),300);
 return;
 }
 
-// 行动点用完，自动结束回合
 if(this.actionPoints<=0){
 setTimeout(()=>this.autoEndTurn(),600);
 }
@@ -394,7 +384,6 @@ this.log('⏭️ 回合结束，等待对手...');
 handleEndTurn(){
 this.isMyTurn=true;
 document.getElementById('waitOverlay').style.display='none';
-// 对手回合结束，我方的回合开始：抽1张卡
 this.startTurn();
 this.log('🎮 对手回合结束！抽1张卡并开始你的回合');
 this.updateUI();
@@ -403,13 +392,10 @@ this.updateUI();
 enemyTurn(){
 this.log('⏭️ 敌人回合...');
 setTimeout(()=>{
-// 敌人抽卡（模拟）
 this.log('👹 敌人抽了1张卡');
-// 敌人行动
 const dmg=Math.floor(Math.random()*15)+10;
 this.p1.hp-=dmg;
 this.log('👹 敌人造成<span class="damage">'+dmg+'</span>伤害');
-// 敌人回合结束，回到玩家回合：抽1张卡
 setTimeout(()=>{
 this.startTurn();
 this.log('🎮 你的回合！抽1张卡');
