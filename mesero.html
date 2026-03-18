@@ -2,78 +2,29 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Mesero - Cobros</title>
+    <title>Mesero - DEBUG</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         .order-card { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .debug-info { background: #fff3cd; border: 1px solid #ffc107; padding: 8px; margin: 5px 0; font-family: monospace; font-size: 11px; color: #856404; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4">
     <div class="max-w-4xl mx-auto">
-        <header class="bg-blue-600 text-white p-4 rounded-lg shadow mb-4">
-            <h1 class="text-2xl font-bold">🍽️ Panel de Mesero</h1>
-            <p class="text-sm mt-1">Fecha Chile: <span id="currentDate"></span> | Moneda: CLP</p>
-            <div class="mt-2 flex gap-2">
-                <button onclick="showSection('today')" class="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold">Pedidos Hoy</button>
-                <button onclick="showSection('history')" class="bg-blue-700 text-white px-3 py-1 rounded text-sm">Historial</button>
-            </div>
+        <header class="bg-red-600 text-white p-4 rounded-lg shadow mb-4">
+            <h1 class="text-2xl font-bold">🍽️ Mesero - MODO DEBUG</h1>
+            <p class="text-sm mt-1">Fecha: <span id="currentDate"></span> | Revisando cálculos...</p>
         </header>
         
-        <div id="todaySection">
-            <div class="bg-white p-4 rounded-lg shadow mb-4">
-                <h2 class="text-lg font-bold mb-2">📊 Resumen del Día (CLP)</h2>
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-blue-50 p-2 rounded">
-                        <div class="text-2xl font-bold text-blue-600" id="totalOrders">0</div>
-                        <div class="text-xs">Total Pedidos</div>
-                    </div>
-                    <div class="bg-green-50 p-2 rounded">
-                        <div class="text-2xl font-bold text-green-600" id="totalRevenue">0</div>
-                        <div class="text-xs">Ingresos</div>
-                    </div>
-                    <div class="bg-yellow-50 p-2 rounded">
-                        <div class="text-2xl font-bold text-yellow-600" id="pendingPayment">0</div>
-                        <div class="text-xs">Por Cobrar</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="ordersList" class="space-y-3">
-                <div class="text-center text-gray-500 py-8">Cargando pedidos...</div>
-            </div>
-        </div>
-
-        <div id="historySection" class="hidden">
-            <div class="bg-white p-4 rounded-lg shadow mb-4">
-                <h3 class="font-bold mb-2">Buscar Historial</h3>
-                <input type="date" id="historyDate" class="w-full p-2 border rounded mb-2">
-                <button onclick="loadHistory()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">Buscar</button>
-            </div>
-            <div id="historyStats" class="hidden bg-green-100 p-3 rounded mb-3 text-center font-bold text-green-800"></div>
-            <div id="historyList" class="space-y-3"></div>
+        <div id="ordersList" class="space-y-3">
+            <div class="text-center text-gray-500 py-8">Cargando...</div>
         </div>
     </div>
 
     <script>
-        // 🔥 修复：自动处理金额单位（如果小于1000，乘以1000）
-        // 29 -> 29.000 | 2500 -> 2.500 | 15000 -> 15.000
-        function formatCLP(amount) {
-            if (!amount || isNaN(amount)) return '0';
-            let num = parseFloat(amount);
-            
-            // 🔥 关键修复：如果数字太小（<1000），可能是以千为单位存储的
-            // 比如存的是29，但实际是29000比索
-            if (num > 0 && num < 1000) {
-                num = num * 1000;
-            }
-            
-            // 格式化为智利比索格式：点号作为千位分隔符
-            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
-
         const firebaseConfig = {
             databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com"
         };
@@ -86,36 +37,35 @@
             return `${chileTime.getFullYear()}-${String(chileTime.getMonth()+1).padStart(2,'0')}-${String(chileTime.getDate()).padStart(2,'0')}`;
         }
         
-        const today = getChileDate();
-        document.getElementById('currentDate').textContent = today;
-        document.getElementById('historyDate').value = today;
-        
-        let todayOrders = {};
+        document.getElementById('currentDate').textContent = getChileDate();
+
+        function formatCLP(amount) {
+            if (!amount || isNaN(amount)) return '0';
+            let num = parseFloat(amount);
+            if (num > 0 && num < 1000) num = num * 1000;
+            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
         function listenToOrders() {
             db.ref('orders').on('value', (snapshot) => {
                 const allOrders = snapshot.val() || {};
-                todayOrders = {};
+                const today = getChileDate();
+                const todayOrders = {};
                 
-                Object.keys(allOrders).forEach(orderId => {
-                    const order = allOrders[orderId];
-                    if (order && order.date === today) {
-                        todayOrders[orderId] = order;
+                Object.keys(allOrders).forEach(id => {
+                    if (allOrders[id].date === today) {
+                        todayOrders[id] = allOrders[id];
                     }
                 });
                 
-                renderOrders(todayOrders);
-                updateSummary(todayOrders);
-            }, (error) => {
-                document.getElementById('ordersList').innerHTML = 
-                    `<div class="text-red-500 text-center py-4">Error: ${error.message}</div>`;
+                renderOrdersDebug(todayOrders);
             });
         }
         
-        function renderOrders(orders) {
+        function renderOrdersDebug(orders) {
             const container = document.getElementById('ordersList');
             
             if (Object.keys(orders).length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-8">No hay pedidos para hoy</div>';
+                container.innerHTML = '<div class="text-center text-gray-400 py-8">No hay pedidos</div>';
                 return;
             }
             
@@ -127,139 +77,78 @@
                 const order = orders[id];
                 const isPaid = order.paymentStatus === 'paid';
                 
+                // 🔥 DEBUG: 计算每个单项的小计，检查哪里出错了
+                let calculatedTotal = 0;
+                const itemDetails = (order.items || []).map((item, index) => {
+                    const price = parseFloat(item.price) || 0;
+                    const qty = parseInt(item.quantity) || 0;
+                    const subtotal = price * qty;
+                    calculatedTotal += subtotal;
+                    
+                    return `
+                        <div class="flex justify-between text-sm ${subtotal !== (item.price * item.quantity) ? 'text-red-600 font-bold' : ''}">
+                            <span>${index+1}. ${qty}x ${item.name} (@${formatCLP(price)})</span>
+                            <span class="font-mono">${formatCLP(subtotal)}</span>
+                        </div>
+                        ${price !== item.price ? `<div class="text-xs text-red-500">⚠️ Precio original: ${item.price}, Usado: ${price}</div>` : ''}
+                    `;
+                }).join('');
+                
+                // 🔥 检查存储的 total 和计算的是否一致
+                const storedTotal = parseFloat(order.total) || 0;
+                const mismatch = Math.abs(storedTotal - calculatedTotal) > 1;
+                
                 return `
                 <div class="order-card bg-white rounded-lg shadow p-4 border-l-4 ${isPaid ? 'border-green-500' : 'border-red-500'}">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <span class="text-xs text-gray-500 font-mono">#${id.slice(-6)}</span>
+                            <span class="text-xs text-gray-500">#${id.slice(-6)}</span>
                             <span class="ml-2 px-2 py-1 rounded text-xs font-bold ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cooking' ? 'bg-blue-100 text-blue-800' : order.status === 'ready' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                                ${order.status === 'pending' ? 'PENDIENTE' : order.status === 'cooking' ? 'COCINANDO' : order.status === 'ready' ? 'LISTO' : 'ENTREGADO'}
+                                ${order.status || 'PENDIENTE'}
                             </span>
                         </div>
-                        <span class="text-2xl font-bold text-gray-800">${formatCLP(order.total)}</span>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-gray-800">${formatCLP(order.total)}</div>
+                            ${mismatch ? `<div class="text-red-600 text-xs font-bold">⚠️ Error de cálculo!</div>` : ''}
+                        </div>
                     </div>
                     
-                    <div class="space-y-1 mb-3 bg-gray-50 p-2 rounded text-sm">
-                        ${(order.items || []).map(item => {
-                            const subtotal = item.price * item.quantity;
-                            return `
-                                <div class="flex justify-between">
-                                    <span>${item.quantity}x ${item.name}</span>
-                                    <span class="text-gray-600 font-mono">${formatCLP(subtotal)}</span>
-                                </div>
-                            `;
-                        }).join('')}
+                    <div class="space-y-1 mb-3 bg-gray-50 p-2 rounded">
+                        ${itemDetails}
                     </div>
                     
-                    <div class="flex justify-between items-center pt-2 border-t">
-                        <span class="text-xs text-gray-500">${new Date(order.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</span>
-                        <span class="px-2 py-1 rounded text-xs font-bold ${isPaid ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}">
-                            ${isPaid ? '✓ PAGADO' : '⚠ POR COBRAR'}
-                        </span>
+                    <!-- 🔥 DEBUG INFO -->
+                    <div class="debug-info">
+                        <strong>DEBUG:</strong><br>
+                        • Total guardado en DB: ${order.total} (${formatCLP(order.total)})<br>
+                        • Total calculado: ${calculatedTotal} (${formatCLP(calculatedTotal)})<br>
+                        • Diferencia: ${Math.abs(storedTotal - calculatedTotal)}<br>
+                        • Nº de items: ${(order.items || []).length}<br>
+                        ${mismatch ? '<span class="text-red-700 font-bold">❌ ERROR: El total no coincide con la suma de items!</span>' : '<span class="text-green-700">✓ Cálculo correcto</span>'}
                     </div>
                     
                     ${!isPaid ? `
                     <div class="mt-3 grid grid-cols-3 gap-2">
-                        <button onclick="processPayment('${id}', 'cash')" class="bg-green-600 text-white py-2 rounded text-sm font-bold hover:bg-green-700">💵 Efectivo</button>
-                        <button onclick="processPayment('${id}', 'card')" class="bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700">💳 Tarjeta</button>
-                        <button onclick="processPayment('${id}', 'transfer')" class="bg-purple-600 text-white py-2 rounded text-sm font-bold hover:bg-purple-700">📱 Transferencia</button>
+                        <button onclick="processPayment('${id}', 'cash')" class="bg-green-600 text-white py-2 rounded text-sm font-bold">💵 Efectivo</button>
+                        <button onclick="processPayment('${id}', 'card')" class="bg-blue-600 text-white py-2 rounded text-sm font-bold">💳 Tarjeta</button>
+                        <button onclick="processPayment('${id}', 'transfer')" class="bg-purple-600 text-white py-2 rounded text-sm font-bold">📱 Transferencia</button>
                     </div>
                     ` : `
                     <div class="mt-2 text-xs text-green-700 font-bold text-center bg-green-50 py-1 rounded">
-                        ✓ Método: ${order.paymentMethod || 'N/A'}
+                        ✓ Pagado: ${order.paymentMethod}
                     </div>
                     `}
                 </div>
                 `;
             }).join('');
         }
-        function updateSummary(orders) {
-            const totalOrders = Object.keys(orders).length;
-            let revenue = 0;
-            let pending = 0;
-            
-            Object.values(orders).forEach(order => {
-                const total = parseFloat(order.total) || 0;
-                if (order.paymentStatus === 'paid') {
-                    revenue += total;
-                } else {
-                    pending += total;
-                }
-            });
-            
-            document.getElementById('totalOrders').textContent = totalOrders;
-            // 现在 29 会显示为 29.000
-            document.getElementById('totalRevenue').textContent = formatCLP(revenue);
-            document.getElementById('pendingPayment').textContent = formatCLP(pending);
-        }
         
         function processPayment(orderId, method) {
             const methodNames = { 'cash': 'Efectivo', 'card': 'Tarjeta', 'transfer': 'Transferencia' };
-            const amount = todayOrders[orderId]?.total || 0;
-            
-            if (!confirm(`¿Confirmar pago de ${formatCLP(amount)} CLP con ${methodNames[method]}?`)) return;
-            
             db.ref('orders/' + orderId).update({
                 paymentStatus: 'paid',
                 paymentMethod: methodNames[method],
                 paidAt: Date.now()
-            }).then(() => {
-                alert('✓ Pago registrado: ' + formatCLP(amount) + ' CLP');
-            }).catch(err => alert('Error: ' + err.message));
-        }
-        
-        function showSection(section) {
-            document.getElementById('todaySection').classList.toggle('hidden', section !== 'today');
-            document.getElementById('historySection').classList.toggle('hidden', section !== 'history');
-        }
-        
-        function loadHistory() {
-            const date = document.getElementById('historyDate').value;
-            const container = document.getElementById('historyList');
-            const statsDiv = document.getElementById('historyStats');
-            
-            container.innerHTML = '<div class="text-center py-4 text-gray-500">Cargando...</div>';
-            statsDiv.classList.add('hidden');
-            
-            db.ref('orders').once('value', (snapshot) => {
-                const allOrders = snapshot.val() || {};
-                const filtered = {};
-                
-                Object.keys(allOrders).forEach(id => {
-                    if (allOrders[id].date === date) filtered[id] = allOrders[id];
-                });
-                
-                if (Object.keys(filtered).length === 0) {
-                    container.innerHTML = `<div class="text-center text-gray-400 py-8">No hay pedidos para el ${date}</div>`;
-                    return;
-                }
-                
-                let dayRevenue = 0, totalDay = 0;
-                Object.values(filtered).forEach(o => {
-                    totalDay += o.total || 0;
-                    if (o.paymentStatus === 'paid') dayRevenue += o.total || 0;
-                });
-                
-                statsDiv.innerHTML = `Total: ${formatCLP(dayRevenue)} CLP / ${Object.keys(filtered).length} pedidos`;
-                statsDiv.classList.remove('hidden');
-                
-                container.innerHTML = Object.keys(filtered)
-                    .sort((a,b) => filtered[b].timestamp - filtered[a].timestamp)
-                    .map(id => {
-                        const o = filtered[id];
-                        return `
-                        <div class="bg-white p-3 rounded shadow border-l-4 ${o.paymentStatus==='paid'?'border-green-500':'border-red-500'}">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-gray-800">#${id.slice(-6)}</span>
-                                <span class="text-lg font-bold ${o.paymentStatus==='paid'?'text-green-600':'text-red-600'}">${formatCLP(o.total)}</span>
-                            </div>
-                            <div class="text-sm text-gray-600 mt-1">${(o.items || []).map(i => i.quantity + 'x ' + i.name).join(', ')}</div>
-                            <div class="flex justify-between items-center mt-2 text-xs">
-                                <span class="text-gray-400">${new Date(o.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</span>
-                                <span class="${o.paymentStatus==='paid' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}">${o.paymentStatus==='paid' ? `✓ ${o.paymentMethod}` : '⚠ SIN PAGAR'}</span>
-                            </div>
-                        </div>`;
-                    }).join('');
             });
         }
         
