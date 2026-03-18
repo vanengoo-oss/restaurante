@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>💰 Caja con Historial</title>
+    <title>💰 Mesero - Caja</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -14,47 +14,60 @@
         .unpaid { border-left: 4px solid #ef4444; background: #fff; }
         .paid { border-left: 4px solid #22c55e; background: #f0fdf4; opacity: 0.8; }
         .date-selector { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .history-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
+        select { appearance: none; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; padding-right: 2.5rem; }
     </style>
 </head>
 <body class="p-4">
 <div class="max-w-6xl mx-auto">
-    <!-- 日期选择栏 -->
     <div class="date-selector rounded-2xl shadow-lg p-4 mb-6 text-white">
         <div class="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold mb-1">💰 Caja Registradora</h1>
-                <p class="text-sm opacity-90" id="currentDateDisplay">18 de marzo de 2026</p>
+                <h1 class="text-2xl font-bold mb-1">💰 Terminal de Cobro</h1>
+                <p class="text-sm opacity-90" id="currentDateDisplay">Cargando...</p>
             </div>
-            <div class="flex gap-2 items-center flex-wrap justify-center">
+            <div class="flex gap-2 items-center flex-wrap justify-center bg-white bg-opacity-20 p-3 rounded-xl">
                 <button onclick="changeDate(-1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-3 py-2 rounded-lg font-bold text-sm">← Anterior</button>
-                <input type="date" id="datePicker" class="bg-white text-gray-800 px-2 py-2 rounded-lg font-bold" onchange="selectDate(this.value)">
+                <select id="daySelect" onchange="updateDateFromSelect()" class="bg-white text-gray-800 px-2 py-2 rounded-lg font-bold w-16 text-center">
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                    <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+                    <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                    <option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option>
+                    <option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option>
+                    <option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
+                </select>
+                <span class="text-white font-bold">de</span>
+                <select id="monthSelect" onchange="updateDateFromSelect()" class="bg-white text-gray-800 px-2 py-2 rounded-lg font-bold w-28 cursor-pointer">
+                    <option value="1">enero</option><option value="2">febrero</option><option value="3">marzo</option><option value="4">abril</option>
+                    <option value="5">mayo</option><option value="6">junio</option><option value="7">julio</option><option value="8">agosto</option>
+                    <option value="9">septiembre</option><option value="10">octubre</option><option value="11">noviembre</option><option value="12">diciembre</option>
+                </select>
+                <span class="text-white font-bold">de</span>
+                <select id="yearSelect" onchange="updateDateFromSelect()" class="bg-white text-gray-800 px-2 py-2 rounded-lg font-bold w-20 text-center">
+                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                </select>
                 <button onclick="changeDate(1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-3 py-2 rounded-lg font-bold text-sm">Siguiente →</button>
                 <button onclick="goToday()" class="bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg font-bold text-sm">Hoy</button>
-                <button onclick="showHistoryModal()" class="history-btn text-white px-3 py-2 rounded-lg font-bold text-sm">📊 Historial</button>
             </div>
         </div>
     </div>
 
-    <!-- 收入统计 -->
     <div class="bg-white rounded-2xl shadow p-4 mb-6">
         <div class="flex justify-between items-center">
             <div>
-                <div class="text-sm text-gray-500">💵 Ingresos del <span id="statsDate">día</span></div>
+                <div class="text-sm text-gray-500">Ingresos del día</div>
                 <div class="text-3xl font-bold text-red-600">$<span id="dailyTotal">0</span> CLP</div>
             </div>
             <div class="text-center px-4 border-x">
-                <div class="text-sm text-gray-500">Pedidos</div>
-                <div class="text-2xl font-bold text-blue-600" id="dailyCount">0</div>
+                <div class="text-sm text-gray-500">Por Cobrar</div>
+                <div class="text-2xl font-bold text-orange-600" id="countUnpaidDisplay">0</div>
             </div>
             <div class="text-right">
                 <div class="text-sm text-gray-500">Pagados</div>
-                <div class="text-2xl font-bold text-green-600" id="paidCount">0</div>
+                <div class="text-2xl font-bold text-green-600" id="countPaidDisplay">0</div>
             </div>
         </div>
     </div>
 
-    <!-- 统计卡片 -->
     <div class="grid grid-cols-3 gap-4 mb-6">
         <div class="bg-white p-4 rounded-xl shadow text-center border-b-4 border-red-500">
             <div class="text-3xl font-bold text-red-600" id="countUnpaid">0</div>
@@ -69,32 +82,18 @@
             <div class="text-sm text-gray-500">Total</div>
         </div>
     </div>
-    <!-- 历史记录弹窗 -->
-    <div id="historyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">📊 Historial de Ingresos</h3>
-                <button onclick="closeHistoryModal()" class="text-gray-500 text-2xl">✕</button>
-            </div>
-            <div id="historyList" class="space-y-2">
-                <div class="text-center text-gray-400 py-4">Cargando...</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- 订单列表 -->
     <div id="ordersList" class="grid gap-4 md:grid-cols-2">
         <div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl">
             <div class="text-5xl mb-3">📭</div>
-            <p>Sin pedidos en esta fecha</p>
+            <p>Sin pedidos</p>
         </div>
     </div>
 </div>
 
-<!-- 支付弹窗（同前） -->
 <div id="payModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
-        <h3 class="text-xl font-bold mb-4">Confirmar Pago</h3>
+        <h3 class="text-xl font-bold mb-4 text-gray-800">Confirmar Pago</h3>
         <div class="mb-4">
             <div class="text-sm text-gray-500 mb-1">Monto</div>
             <div class="text-3xl font-bold text-red-600">$<span id="payAmount">0</span> CLP</div>
@@ -102,7 +101,7 @@
         <div class="mb-4">
             <div class="text-sm text-gray-500 mb-2">Método</div>
             <div class="grid grid-cols-3 gap-2">
-                <button onclick="selectMethod('cash')" class="pay-method-btn bg-blue-100 text-blue-700 py-3 rounded-xl font-bold border-2 border-transparent" data-method="cash">💵 Efectivo</button>
+                <button onclick="selectMethod('cash')" class="pay-method-btn bg-blue-100 text-blue-700 py-3 rounded-xl font-bold border-2 border-blue-500" data-method="cash">💵 Efectivo</button>
                 <button onclick="selectMethod('card')" class="pay-method-btn bg-gray-100 text-gray-700 py-3 rounded-xl font-bold border-2 border-transparent" data-method="card">💳 Tarjeta</button>
                 <button onclick="selectMethod('transfer')" class="pay-method-btn bg-gray-100 text-gray-700 py-3 rounded-xl font-bold border-2 border-transparent" data-method="transfer">📱 Transf.</button>
             </div>
@@ -128,84 +127,89 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+let allOrders = [];
 let currentDate = getTodayString();
 let currentPayKey = null;
 let selectedMethod = 'cash';
-let ordersListener = null;
+const monthsES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 
 function getTodayString() {
     const now = new Date();
-    const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
-    return chileTime.getFullYear() + '-' + 
-           String(chileTime.getMonth()+1).padStart(2,'0') + '-' + 
-           String(chileTime.getDate()).padStart(2,'0');
+    return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 }
 
-function formatDate(dateStr) {
+function formatDateES(dateStr) {
     const [y, m, d] = dateStr.split('-');
-    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-    return `${d} de ${months[parseInt(m)-1]} de ${y}`;
+    return `${parseInt(d)} de ${monthsES[parseInt(m)-1]} de ${y}`;
 }
 
-document.getElementById('datePicker').value = currentDate;
-document.getElementById('currentDateDisplay').textContent = formatDate(currentDate);
-loadOrders(currentDate);
-loadHistory();
-
-// 自动检查日期变化（凌晨自动切换）
-setInterval(() => {
-    const now = getTodayString();
-    if (now !== currentDate) {
-        if (confirm('¡Nuevo día! ¿Cambiar a ' + formatDate(now) + '?')) {
-            location.reload();
+db.ref('orders').orderByChild('timestamp').limitToLast(100).on('value', (snapshot) => {
+    allOrders = [];
+    snapshot.forEach(child => {
+        allOrders.push({ key: child.key, ...child.val() });
+    });
+    allOrders.reverse();
+    allOrders.forEach(order => {
+        if (!order.date && order.timestamp) {
+            const d = new Date(order.timestamp);
+            order.date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
         }
-    }
-}, 60000);
+    });
+    renderOrders();
+    updateStats();
+});
+
+function initDateSelectors() {
+    const today = new Date();
+    document.getElementById('daySelect').value = today.getDate();
+    document.getElementById('monthSelect').value = today.getMonth() + 1function updateDateFromSelect() {
+    const day = document.getElementById('daySelect').value;
+    const month = document.getElementById('monthSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    currentDate = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    updateDateDisplay();
+    renderOrders();
+    updateStats();
+}
 
 function changeDate(days) {
-    const date = new Date(currentDate);
-    date.setDate(date.getDate() + days);
-    const newDate = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
-    selectDate(newDate);
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + days);
+    currentDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    document.getElementById('daySelect').value = parseInt(currentDate.split('-')[2]);
+    document.getElementById('monthSelect').value = parseInt(currentDate.split('-')[1]);
+    document.getElementById('yearSelect').value = parseInt(currentDate.split('-')[0]);
+    updateDateDisplay();
+    renderOrders();
+    updateStats();
 }
 
 function goToday() {
-    selectDate(getTodayString());
+    const today = getTodayString();
+    const [y, m, d] = today.split('-');
+    document.getElementById('yearSelect').value = y;
+    document.getElementById('monthSelect').value = parseInt(m);
+    document.getElementById('daySelect').value = parseInt(d);
+    currentDate = today;
+    updateDateDisplay();
+    renderOrders();
+    updateStats();
 }
 
-function selectDate(date) {
-    currentDate = date;
-    document.getElementById('datePicker').value = date;
-    document.getElementById('currentDateDisplay').textContent = formatDate(date);
-    document.getElementById('statsDate').textContent = date === getTodayString() ? 'día' : formatDate(date);
-    loadOrders(date);
-}
-function loadOrders(date) {
-    if (ordersListener) db.ref('orders').off('value', ordersListener);
-    
-    ordersListener = db.ref('orders').orderByChild('date').equalTo(date).on('value', (snapshot) => {
-        const orders = [];
-        snapshot.forEach(child => {
-            orders.push({ key: child.key, ...child.val() });
-        });
-        orders.reverse();
-        renderOrders(orders);
-        updateStats(orders);
-        updateDailyTotal(orders);
-    });
+function updateDateDisplay() {
+    document.getElementById('currentDateDisplay').textContent = formatDateES(currentDate);
 }
 
-function renderOrders(orders) {
+function renderOrders() {
     const container = document.getElementById('ordersList');
+    const orders = allOrders.filter(o => o.date === currentDate);
     if (orders.length === 0) {
         container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl"><div class="text-5xl mb-3">📭</div><p>Sin pedidos en esta fecha</p></div>';
         return;
     }
-    
     container.innerHTML = orders.map(order => {
         const time = order.timestamp ? new Date(order.timestamp).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) : '--:--';
         const isPaid = order.paymentStatus === 'paid';
-        
         return `
             <div class="order-card ${isPaid ? 'paid' : 'unpaid'} rounded-xl shadow p-4">
                 <div class="flex justify-between items-start mb-3">
@@ -217,7 +221,7 @@ function renderOrders(orders) {
                                 ${isPaid ? '✅ Pagado' : '⏳ Por Cobrar'}
                             </span>
                         </div>
-                        <div class="space-y-1 text-sm text-gray-600">
+                        <div class="space-y-1 text-sm text-gray-600 mb-2">
                             ${order.items ? order.items.map(item => `
                                 <div class="flex justify-between">
                                     <span>${item.emoji || '🍽️'} ${item.name} x${item.qty}</span>
@@ -225,17 +229,17 @@ function renderOrders(orders) {
                                 </div>
                             `).join('') : ''}
                         </div>
-                        ${order.note ? `<div class="mt-2 text-xs bg-yellow-50 text-yellow-800 p-2 rounded">💬 ${order.note}</div>` : ''}
+                        ${order.note ? `<div class="text-xs bg-yellow-50 text-yellow-800 p-2 rounded">💬 ${order.note}</div>` : ''}
                     </div>
                 </div>
                 <div class="flex justify-between items-center pt-3 border-t border-gray-100">
                     <div class="text-xl font-bold text-red-600">$${order.total?.toLocaleString() || 0}</div>
                     <div class="flex gap-2">
                         ${!isPaid ? 
-                            `<button onclick="openPayModal('${order.key}', ${order.total})" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md">💰 Cobrar</button>` :
-                            `<div class="text-green-600 font-bold text-sm">${order.paymentMethod}</div>`
+                            `<button onclick="openPayModal('${order.key}', ${order.total})" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-red-700">💰 Cobrar</button>` :
+                            `<div class="text-green-600 font-bold text-sm">${order.paymentMethod || 'Pagado'}</div>`
                         }
-                        <button onclick="deleteOrder('${order.key}')" class="bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm">🗑️</button>
+                        <button onclick="deleteOrder('${order.key}')" class="bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm hover:bg-gray-300">🗑️</button>
                     </div>
                 </div>
             </div>
@@ -243,72 +247,19 @@ function renderOrders(orders) {
     }).join('');
 }
 
-function updateStats(orders) {
+function updateStats() {
+    const orders = allOrders.filter(o => o.date === currentDate);
     const unpaid = orders.filter(o => o.paymentStatus !== 'paid');
     const paid = orders.filter(o => o.paymentStatus === 'paid');
-    
+    const total = paid.reduce((sum, o) => sum + (o.total || 0), 0);
     document.getElementById('countUnpaid').textContent = unpaid.length;
     document.getElementById('countPaid').textContent = paid.length;
     document.getElementById('countTotal').textContent = orders.length;
-    document.getElementById('paidCount').textContent = paid.length;
-}
-
-function updateDailyTotal(orders) {
-    const total = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const count = orders.length;
+    document.getElementById('countUnpaidDisplay').textContent = unpaid.length;
+    document.getElementById('countPaidDisplay').textContent = paid.length;
     document.getElementById('dailyTotal').textContent = total.toLocaleString();
-    document.getElementById('dailyCount').textContent = count;
-    
-    // 保存每日统计到独立节点（方便历史查询）
-    db.ref(`dailyStats/${currentDate}`).set({
-        date: currentDate,
-        total: total,
-        count: count,
-        paidCount: orders.filter(o => o.paymentStatus === 'paid').length,
-        updatedAt: firebase.database.ServerValue.TIMESTAMP
-    });
 }
 
-// 历史记录功能
-function showHistoryModal() {
-    document.getElementById('historyModal').classList.remove('hidden');
-    loadHistory();
-}
-
-function closeHistoryModal() {
-    document.getElementById('historyModal').classList.add('hidden');
-}
-
-function loadHistory() {
-    db.ref('dailyStats').orderByKey().limitToLast(30).once('value', (snapshot) => {
-        const list = document.getElementById('historyList');
-        if (!snapshot.exists()) {
-            list.innerHTML = '<div class="text-center text-gray-400 py-4">Sin historial aún</div>';
-            return;
-        }
-        
-        const days = [];
-        snapshot.forEach(child => {
-            days.push({ date: child.key, ...child.val() });
-        });
-        days.reverse(); // 最新的在前
-        
-        list.innerHTML = days.map(day => `
-            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer" onclick="selectDate('${day.date}'); closeHistoryModal();">
-                <div>
-                    <div class="font-bold text-gray-800">${formatDate(day.date)}</div>
-                    <div class="text-sm text-gray-500">${day.count || 0} pedidos</div>
-                </div>
-                <div class="text-right">
-                    <div class="font-bold text-red-600">$${(day.total || 0).toLocaleString()}</div>
-                    <div class="text-xs text-green-600">${day.paidCount || 0} pagados</div>
-                </div>
-            </div>
-        `).join('');
-    });
-}
-
-// 支付功能（同前）
 function openPayModal(key, amount) {
     currentPayKey = key;
     document.getElementById('payAmount').textContent = amount.toLocaleString();
@@ -337,14 +288,13 @@ function selectMethod(method) {
 function confirmPay() {
     if (!currentPayKey) return;
     const methodNames = { cash: 'Efectivo', card: 'Tarjeta', transfer: 'Transferencia' };
-    
     db.ref(`orders/${currentPayKey}`).update({
         paymentStatus: 'paid',
         paymentMethod: methodNames[selectedMethod],
         paidAt: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
         closePayModal();
-        alert('✅ ¡Pago Confirmado!');
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     });
 }
 
@@ -353,6 +303,10 @@ function deleteOrder(key) {
         db.ref(`orders/${key}`).remove();
     }
 }
+
+initDateSelectors();
+renderOrders();
+updateStats();
 </script>
 </body>
 </html>
