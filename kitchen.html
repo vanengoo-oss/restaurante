@@ -2,50 +2,52 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>厨房订单中心</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>厨房订单</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         .order-card { animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .btn-big { min-height: 48px; touch-action: manipulation; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
-    <div class="max-w-6xl mx-auto">
-        <header class="bg-blue-600 text-white p-4 rounded-lg shadow mb-4">
-            <h1 class="text-2xl font-bold">🍳 厨房订单中心</h1>
-            <p class="text-sm mt-1">今日: <span id="currentDate"></span> | 货币: 智利比索 (CLP)</p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
-                <h3 class="font-bold text-yellow-800 mb-2">⏳ 待制作 <span id="count-pending" class="bg-yellow-500 text-white px-2 rounded-full text-xs">0</span></h3>
-                <div id="list-pending" class="space-y-2"></div>
+<body class="bg-gray-100">
+    <!-- 顶部状态栏 -->
+    <header class="bg-blue-600 text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="flex justify-between items-center">
+            <h1 class="text-lg font-bold">🍳 厨房中心</h1>
+            <span class="text-xs bg-blue-800 px-3 py-1 rounded-full" id="currentDate"></span>
+        </div>
+        <!-- 横向滚动状态栏 -->
+        <div class="flex gap-2 mt-3 overflow-x-auto hide-scrollbar pb-1">
+            <div class="bg-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap flex items-center gap-2">
+                ⏳ 待制作 <span id="count-pending" class="bg-white text-yellow-600 rounded-full w-6 h-6 flex items-center justify-center text-xs">0</span>
             </div>
-            <div class="bg-blue-50 p-3 rounded border border-blue-200">
-                <h3 class="font-bold text-blue-800 mb-2">🔥 制作中 <span id="count-cooking" class="bg-blue-500 text-white px-2 rounded-full text-xs">0</span></h3>
-                <div id="list-cooking" class="space-y-2"></div>
+            <div class="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap flex items-center gap-2">
+                🔥 制作中 <span id="count-cooking" class="bg-white text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs">0</span>
             </div>
-            <div class="bg-green-50 p-3 rounded border border-green-200">
-                <h3 class="font-bold text-green-800 mb-2">✅ 待取餐 <span id="count-ready" class="bg-green-500 text-white px-2 rounded-full text-xs">0</span></h3>
-                <div id="list-ready" class="space-y-2"></div>
+            <div class="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap flex items-center gap-2">
+                ✅ 待取餐 <span id="count-ready" class="bg-white text-green-600 rounded-full w-6 h-6 flex items-center justify-center text-xs">0</span>
             </div>
         </div>
+    </header>
+
+    <!-- 订单列表（垂直滚动） -->
+    <div class="p-3 space-y-3 pb-20" id="ordersContainer">
+        <div class="text-center text-gray-400 py-8">加载中...</div>
     </div>
 
     <script>
-        // 🔥 智利数字格式：只用点作为千位分隔符，不加 $ 符号
-        // 2500 -> 2.500 | 15000 -> 15.000
         function formatCLP(amount) {
-            if (!amount || isNaN(amount)) return '0';
-            const num = Math.round(parseFloat(amount));
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            if (!amount) return '0';
+            return Math.round(parseFloat(amount)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
 
-        const firebaseConfig = {
-            databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com"
-        };
+        const firebaseConfig = { databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
@@ -55,16 +57,17 @@
             return `${chileTime.getFullYear()}-${String(chileTime.getMonth()+1).padStart(2,'0')}-${String(chileTime.getDate()).padStart(2,'0')}`;
         }
         
-        document.getElementById('currentDate').textContent = getChileDate();
+        const today = getChileDate();
+        document.getElementById('currentDate').textContent = today;
 
         function listenOrders() {
-            const today = getChileDate();
             db.ref('orders').on('value', (snapshot) => {
                 const allOrders = snapshot.val() || {};
                 const todayOrders = {};
                 Object.keys(allOrders).forEach(id => {
                     if (allOrders[id].date === today && allOrders[id].status !== 'done') {
                         todayOrders[id] = allOrders[id];
+                        todayOrders[id].id = id;
                     }
                 });
                 renderOrders(todayOrders);
@@ -72,11 +75,10 @@
         }
 
         function renderOrders(orders) {
+            const container = document.getElementById('ordersContainer');
             const pending = [], cooking = [], ready = [];
             
-            Object.keys(orders).forEach(id => {
-                const order = orders[id];
-                order.id = id;
+            Object.values(orders).forEach(order => {
                 if (order.status === 'ready') ready.push(order);
                 else if (order.status === 'cooking') cooking.push(order);
                 else pending.push(order);
@@ -86,58 +88,59 @@
             document.getElementById('count-cooking').textContent = cooking.length;
             document.getElementById('count-ready').textContent = ready.length;
 
-            renderList('list-pending', pending, 'pending', 'bg-yellow-500 hover:bg-yellow-600');
-            renderList('list-cooking', cooking, 'cooking', 'bg-blue-500 hover:bg-blue-600');
-            renderList('list-ready', ready, 'ready', 'bg-green-500 hover:bg-green-600');
-        }
-
-        function renderList(containerId, orders, currentStatus, btnColor) {
-            const container = document.getElementById(containerId);
-            if (orders.length === 0) {
-                container.innerHTML = '<div class="text-gray-400 text-center text-sm py-4">无订单</div>';
+            const allOrders = [...pending, ...cooking, ...ready];
+            
+            if (allOrders.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 py-12 text-lg">今日暂无订单</div>';
                 return;
             }
-            
-            container.innerHTML = orders.map(order => {
-                const nextText = currentStatus === 'pending' ? '开始制作 →' : 
-                                currentStatus === 'cooking' ? '制作完成 →' : '已取餐 ✓';
-                const nextStatus = currentStatus === 'pending' ? 'cooking' : 
-                                  currentStatus === 'cooking' ? 'ready' : 'done';
-                
+
+            container.innerHTML = allOrders.map(order => {
+                const isPending = order.status === 'pending';
+                const isCooking = order.status === 'cooking';
+                const statusColor = isPending ? 'border-l-yellow-400 bg-yellow-50' : isCooking ? 'border-l-blue-400 bg-blue-50' : 'border-l-green-400 bg-green-50';
+                const btnColor = isPending ? 'bg-yellow-500 active:bg-yellow-600' : isCooking ? 'bg-blue-500 active:bg-blue-600' : 'bg-green-500 active:bg-green-600';
+                const btnText = isPending ? '开始制作 →' : isCooking ? '制作完成 →' : '出餐 ✓';
+                const nextStatus = isPending ? 'cooking' : isCooking ? 'ready' : 'done';
+
                 return `
-                <div class="bg-white p-3 rounded shadow order-card border-l-4 ${currentStatus === 'pending' ? 'border-yellow-400' : currentStatus === 'cooking' ? 'border-blue-400' : 'border-green-400'}">
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-gray-800 text-lg">#${order.id.slice(-6)}</span>
-                        <span class="font-bold text-blue-600 text-lg">${formatCLP(order.total)}</span>
+                <div class="order-card bg-white rounded-xl shadow-md border-l-8 ${statusColor} p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="text-2xl font-bold text-gray-800">#${order.id.slice(-4)}</span>
+                            <span class="ml-2 text-xs px-2 py-1 rounded-full ${isPending ? 'bg-yellow-200 text-yellow-800' : isCooking ? 'bg-blue-200 text-blue-800' : 'bg-green-200 text-green-800'} font-bold">
+                                ${isPending ? '待制作' : isCooking ? '制作中' : '待取餐'}
+                            </span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-green-600">${formatCLP(order.total)}</div>
+                            <div class="text-xs text-gray-400">${new Date(order.timestamp).toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})}</div>
+                        </div>
                     </div>
-                    <div class="text-sm space-y-1 mb-3 bg-gray-50 p-2 rounded">
-                        ${(order.items || []).map(item => {
-                            const subtotal = item.price * item.quantity;
-                            return `
-                                <div class="flex justify-between">
-                                    <span>${item.quantity}x ${item.name}</span>
-                                    <span class="text-gray-600 font-mono">${formatCLP(subtotal)}</span>
+                    
+                    <div class="bg-white rounded-lg p-3 mb-3 space-y-2">
+                        ${(order.items || []).map(item => `
+                            <div class="flex justify-between items-center border-b border-gray-100 py-2 last:border-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-gray-200 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">${item.quantity}</span>
+                                    <span class="font-medium text-gray-800">${item.name}</span>
                                 </div>
-                            `;
-                        }).join('')}
+                                <span class="text-gray-600 font-mono">${formatCLP(item.price * item.quantity)}</span>
+                            </div>
+                        `).join('')}
                     </div>
+                    
                     <button onclick="updateStatus('${order.id}', '${nextStatus}')" 
-                            class="w-full ${btnColor} text-white py-2 rounded text-sm font-bold transition">
-                        ${nextText}
+                            class="btn-big w-full ${btnColor} text-white py-4 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition transform">
+                        ${btnText}
                     </button>
-                    <div class="text-xs text-gray-400 mt-1 text-center">
-                        ${new Date(order.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}
-                    </div>
                 </div>
                 `;
             }).join('');
         }
 
         function updateStatus(orderId, status) {
-            db.ref('orders/' + orderId).update({
-                status: status,
-                updatedAt: Date.now()
-            });
+            db.ref('orders/' + orderId).update({ status, updatedAt: Date.now() });
         }
 
         listenOrders();
