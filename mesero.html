@@ -9,6 +9,7 @@
     <style>
         .order-card { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .debug-box { background: #f0f0f0; border: 1px solid #ccc; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4">
@@ -21,6 +22,15 @@
                 <button onclick="showSection('history')" class="bg-blue-700 text-white px-3 py-1 rounded text-sm">Historial</button>
             </div>
         </header>
+        
+        <!-- 调试信息（出问题时看这里） -->
+        <div id="debugInfo" class="debug-box hidden">
+            <strong>Estado de conexión:</strong> <span id="connStatus">Conectando...</span><br>
+            <strong>Total en DB:</strong> <span id="totalInDB">0</span> pedidos<br>
+            <strong>Fecha hoy:</strong> <span id="todayDate"></span><br>
+            <strong>Errores:</strong> <span id="errorMsg" class="text-red-600">Ninguno</span>
+        </div>
+        <button onclick="toggleDebug()" class="text-xs text-gray-500 mb-2 underline">Mostrar/Ocultar Debug</button>
         
         <div id="todaySection">
             <div class="bg-white p-4 rounded-lg shadow mb-4">
@@ -41,7 +51,9 @@
                 </div>
             </div>
             
-            <div id="ordersList" class="space-y-3"></div>
+            <div id="ordersList" class="space-y-3">
+                <div class="text-center text-gray-500 py-8">Cargando pedidos...</div>
+            </div>
         </div>
 
         <div id="historySection" class="hidden">
@@ -56,58 +68,119 @@
     </div>
 
     <script>
-        // 🔥 智利数字格式：只用点作为千位分隔符，不加 $ 符号
-        // 2500 -> 2.500 | 15000 -> 15.000
+        // 智利数字格式
         function formatCLP(amount) {
             if (!amount || isNaN(amount)) return '0';
             const num = Math.round(parseFloat(amount));
             return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
 
+        // 🔥 Firebase配置 - 确保databaseURL正确
         const firebaseConfig = {
             databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com"
         };
-        firebase.initializeApp(firebaseConfig);
+        
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log("Firebase inicializado correctamente");
+        } catch (e) {
+            console.error("Error Firebase:", e);
+            document.getElementById('errorMsg').textContent = "Error Firebase: " + e.message;
+        }
+        
         const db = firebase.database();
         
+        // 获取智利日期（YYYY-MM-DD）
         function getChileDate() {
             const now = new Date();
             const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
-            return `${chileTime.getFullYear()}-${String(chileTime.getMonth()+1).padStart(2,'0')}-${String(chileTime.getDate()).padStart(2,'0')}`;
+            const year = chileTime.getFullYear();
+            const month = String(chileTime.getMonth() + 1).padStart(2, '0');
+            const day = String(chileTime.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
         
-        document.getElementById('currentDate').textContent = getChileDate();
-        document.getElementById('historyDate').value = getChileDate();
+        const today = getChileDate();
+        document.getElementById('currentDate').textContent = today;
+        document.getElementById('todayDate').textContent = today;
+        document.getElementById('historyDate').value = today;
         
         let todayOrders = {};
         
+        function toggleDebug() {
+            document.getElementById('debugInfo').classList.toggle('hidden');
+        }
+        // 🔥 关键修复：监听所有订单，客户端筛选今日
         function listenToOrders() {
-            const today = getChileDate();
+            console.log("Iniciando escucha de pedidos...");
+            document.getElementById('connStatus').textContent = "Escuchando...";
             
-            db.ref('orders').on('value', (snapshot) => {
-                const allOrders = snapshot.val() || {};
-                todayOrders = {};
+            const ordersRef = db.ref('orders');
+            
+            ordersRef.on('value', (snapshot) => {
+                console.log("Datos recibidos de Firebase");
+                document.getElementById('connStatus').textContent = "Conectado ✓";
                 
-                Object.keys(allOrders).forEach(orderId => {
+                const allOrders = snapshot.val();
+                
+                // 调试信息
+                if (!allOrders) {
+                    console.log("No hay datos en la DB");
+                    document.getElementById('totalInDB').textContent = "0";
+                    document.getElementById('ordersList').innerHTML = '<div class="text-center text-gray-500 py-8">No hay pedidos en la base de datos</div>';
+                    updateSummary({});
+                    return;
+                }
+                
+                const allKeys = Object.keys(allOrders);
+                document.getElementById('totalInDB').textContent = allKeys.length;
+                console.log("Total pedidos en DB:", allKeys.length);
+                
+                // 筛选今日订单
+                todayOrders = {};
+                let matchCount = 0;
+                
+                allKeys.forEach(orderId => {
                     const order = allOrders[orderId];
+                    // 调试：打印第一个订单的日期看看格式
+                    if (matchCount === 0) {
+                        console.log("Ejemplo de pedido:", orderId, "fecha:", order?.date);
+                    }
+                    
                     if (order && order.date === today) {
                         todayOrders[orderId] = order;
+                        matchCount++;
                     }
                 });
                 
-                renderOrders(todayOrders);
+                console.log("Pedidos de hoy:", matchCount);
+                
+                if (matchCount === 0) {
+                    document.getElementById('ordersList').innerHTML = 
+                        `<div class="text-center text-gray-500 py-8">
+                            No hay pedidos para hoy (${today})<br>
+                            <span class="text-xs text-gray-400">Total en sistema: ${allKeys.length} pedidos</span>
+                        </div>`;
+                } else {
+                    renderOrders(todayOrders);
+                }
+                
                 updateSummary(todayOrders);
+                
+            }, (error) => {
+                console.error("Error de Firebase:", error);
+                document.getElementById('connStatus').textContent = "Error ✗";
+                document.getElementById('errorMsg').textContent = error.message;
+                document.getElementById('ordersList').innerHTML = 
+                    `<div class="text-red-500 text-center py-4">
+                        Error de conexión: ${error.message}<br>
+                        <button onclick="location.reload()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded">Recargar</button>
+                    </div>`;
             });
         }
         
         function renderOrders(orders) {
             const container = document.getElementById('ordersList');
-            
-            if (Object.keys(orders).length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-8">No hay pedidos para hoy</div>';
-                return;
-            }
-            
             const sortedIds = Object.keys(orders).sort((a, b) => {
                 return (orders[b].timestamp || 0) - (orders[a].timestamp || 0);
             });
@@ -162,7 +235,6 @@
                 `;
             }).join('');
         }
-
         function updateSummary(orders) {
             const totalOrders = Object.keys(orders).length;
             let revenue = 0;
@@ -193,9 +265,10 @@
                 paymentMethod: methodNames[method],
                 paidAt: Date.now()
             }).then(() => {
-                alert('✓ Pago registrado: ' + forma            }).then(() => {
                 alert('✓ Pago registrado: ' + formatCLP(amount) + ' CLP');
-            }).catch(err => alert('Error: ' + err.message));
+            }).catch(err => {
+                alert('Error: ' + err.message);
+            });
         }
         
         function showSection(section) {
@@ -253,6 +326,7 @@
             });
         }
         
+        // 🔥 启动监听
         listenToOrders();
     </script>
 </body>
