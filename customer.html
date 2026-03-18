@@ -3,20 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🍽️ Menú - Restaurante</title>
+    <title>🍽️ Menú</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
-        body { font-family: 'Noto Sans SC', sans-serif; background: #f3f4f6; }
-        .dish-card { transition: all 0.2s; }
-        .dish-card:active { transform: scale(0.95); }
-        .cart-panel { transform: translateY(100%); transition: transform 0.3s; }
+        body { font-family: sans-serif; background: #f3f4f6; }
+        .cart-panel { transform: translateY(100%); transition: transform 0.3s; position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; z-index: 50; max-height: 70vh; overflow-y: auto; }
         .cart-panel.open { transform: translateY(0); }
         .success-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
         .success-modal.show { display: flex; }
-        .dish-img { width: 100%; height: 160px; object-fit: cover; border-radius: 12px 12px 0 0; }
     </style>
 </head>
 <body class="pb-20">
@@ -24,7 +20,7 @@
 <header class="bg-white shadow-sm sticky top-0 z-40 p-4">
     <div class="flex justify-between items-center max-w-md mx-auto">
         <div>
-            <h1 class="text-xl font-bold text-gray-800">Restaurante Sabores</h1>
+            <h1 class="text-xl font-bold text-gray-800">Restaurante</h1>
             <div class="text-sm text-gray-500 mt-1">
                 Mesa: <input type="number" id="tableNum" value="1" min="1" class="w-16 border rounded px-2 py-1 text-center font-bold text-purple-600">
             </div>
@@ -40,7 +36,7 @@
     <div class="grid grid-cols-2 gap-3" id="menuGrid"></div>
 </main>
 
-<div id="cartPanel" class="cart-panel fixed inset-x-0 bottom-0 bg-white rounded-t-3xl shadow-2xl z-50 max-h-[70vh] overflow-y-auto">
+<div id="cartPanel" class="cart-panel shadow-2xl">
     <div class="p-4 border-b sticky top-0 bg-white rounded-t-3xl flex justify-between items-center">
         <h3 class="font-bold text-lg">🛒 Mi Pedido</h3>
         <button onclick="toggleCart()" class="text-gray-500 text-xl">✕</button>
@@ -51,23 +47,25 @@
             <span class="text-gray-600">Total</span>
             <span class="text-2xl font-bold text-red-600">$<span id="totalPrice">0</span> CLP</span>
         </div>
-        <textarea id="orderNote" placeholder="Notas: Sin picante / Para llevar..." class="w-full mb-3 p-3 border rounded-xl text-sm resize-none focus:outline-none focus:border-purple-500"></textarea>
-        <button onclick="submitOrder()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">
-            Confirmar Pedido →
+        <textarea id="orderNote" placeholder="Notas..." class="w-full mb-3 p-3 border rounded-xl text-sm"></textarea>
+        <button onclick="submitOrder()" id="submitBtn" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">
+            Confirmar Pedido
         </button>
+        <div id="errorMsg" class="text-red-500 text-sm mt-2 text-center hidden"></div>
     </div>
 </div>
 
 <div id="successModal" class="success-modal">
-    <div class="bg-white rounded-2xl p-6 text-center max-w-sm mx-4 animate-bounce">
+    <div class="bg-white rounded-2xl p-6 text-center max-w-sm mx-4">
         <div class="text-6xl mb-2">✅</div>
         <h3 class="font-bold text-xl mb-1">¡Pedido Enviado!</h3>
         <p class="text-gray-500 mb-4">La cocina ha recibido tu orden</p>
-        <button onclick="closeSuccess()" class="bg-purple-600 text-white px-8 py-3 rounded-full font-bold">Seguir Comprando</button>
+        <button onclick="closeSuccess()" class="bg-purple-600 text-white px-8 py-3 rounded-full font-bold">Seguir</button>
     </div>
 </div>
 
 <script>
+// ===== Firebase配置 =====
 const firebaseConfig = {
     apiKey: "你的API密钥",
     authDomain: "你的项目.firebaseapp.com",
@@ -81,76 +79,28 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 菜单数据 - 包含你的照片（记得改成直接链接）
 const menu = [
-    { 
-        id: 1, 
-        name: 'Camarón Crujiente',  // 虾脆片/虾饼
-        price: 5500, 
-        img: 'https://i.ibb.co/prwrt3Nm/camaron.jpg',  // ← 改成你复制的直接链接
-        emoji: '🍤'
-    },
-    { 
-        id: 2, 
-        name: 'Pollo Kung Pao', 
-        price: 7500, 
-        img: 'https://i.imgur.com/example2.jpg',
-        emoji: '🍗'
-    },
-    { 
-        id: 3, 
-        name: 'Arroz Frito Especial', 
-        price: 5500, 
-        img: 'https://i.imgur.com/example3.jpg',
-        emoji: '🍚'
-    },
-    { 
-        id: 4, 
-        name: 'Dumplings (6unid)', 
-        price: 6000, 
-        img: 'https://i.imgur.com/example4.jpg',
-        emoji: '🥟'
-    },
-    { 
-        id: 5, 
-        name: 'Bebida Lata', 
-        price: 2500, 
-        img: 'https://i.imgur.com/example5.jpg',
-        emoji: '🥤'
-    },
-    { 
-        id: 6, 
-        name: 'Té con Leche', 
-        price: 4000, 
-        img: 'https://i.imgur.com/example6.jpg',
-        emoji: '🧋'
-    }
+    { id: 1, name: 'Camarón Crujiente', price: 5500, img: 'https://i.ibb.co/prwrt3Nm/camaron.jpg', emoji: '🍤' },
+    { id: 2, name: 'Pollo Kung Pao', price: 7500, img: 'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=400', emoji: '🍗' },
+    { id: 3, name: 'Arroz Frito', price: 5500, img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400', emoji: '🍚' },
+    { id: 4, name: 'Dumplings', price: 6000, img: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400', emoji: '🥟' },
+    { id: 5, name: 'Bebida', price: 2500, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400', emoji: '🥤' }
 ];
 
 let cart = {};
+
 function renderMenu() {
     const grid = document.getElementById('menuGrid');
     grid.innerHTML = menu.map(item => `
-        <div class="dish-card bg-white rounded-2xl shadow-md overflow-hidden" onclick="addToCart(${item.id})">
-            <div class="relative h-40 bg-gray-100 overflow-hidden">
-                <img src="${item.img}" 
-                     alt="${item.name}" 
-                     class="dish-img"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                     loading="lazy">
-                <div style="display:none;" class="absolute inset-0 flex items-center justify-center text-6xl bg-gradient-to-br from-purple-100 to-pink-100">
-                    ${item.emoji}
-                </div>
-                <div class="absolute bottom-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                    $${item.price.toLocaleString()}
-                </div>
+        <div class="bg-white rounded-2xl shadow-md overflow-hidden cursor-pointer active:scale-95 transition-transform" onclick="addToCart(${item.id})">
+            <div class="h-40 bg-gray-100 overflow-hidden relative">
+                <img src="${item.img}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                <div style="display:none" class="absolute inset-0 items-center justify-center text-5xl bg-gradient-to-br from-purple-100 to-pink-100">${item.emoji}</div>
+                <div class="absolute bottom-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-bold">$${item.price.toLocaleString()}</div>
             </div>
             <div class="p-3">
-                <h3 class="font-bold text-gray-800 text-sm leading-tight mb-1">${item.name}</h3>
-                <div class="flex justify-between items-center">
-                    <span class="text-xs text-gray-500">Toca para agregar</span>
-                    <span class="bg-purple-100 text-purple-600 w-8 h-8 rounded-full flex items-center justify-center text-xl font-bold shadow-sm">+</span>
-                </div>
+                <h3 class="font-bold text-sm">${item.name}</h3>
+                <div class="mt-2 text-right"><span class="bg-purple-100 text-purple-600 w-8 h-8 rounded-full inline-flex items-center justify-center text-xl font-bold">+</span></div>
             </div>
         </div>
     `).join('');
@@ -176,23 +126,23 @@ function updateCartUI() {
     
     const container = document.getElementById('cartItems');
     if (count === 0) {
-        container.innerHTML = '<div class="text-center text-gray-400 py-8">El carrito está vacío</div>';
+        container.innerHTML = '<div class="text-center text-gray-400 py-8">Carrito vacío</div>';
     } else {
         container.innerHTML = Object.entries(cart).map(([id, qty]) => {
             const item = menu.find(m => m.id == id);
             return `
                 <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
                     <div class="flex items-center gap-3">
-                        <img src="${item.img}" class="w-12 h-12 rounded-lg object-cover" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>${item.emoji}</text></svg>'">
+                        <span class="text-2xl">${item.emoji}</span>
                         <div>
                             <div class="font-bold text-sm">${item.name}</div>
-                            <div class="text-sm text-gray-500">$${item.price.toLocaleString()}</div>
+                            <div class="text-xs text-gray-500">$${item.price.toLocaleString()}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <button onclick="changeQty(${id}, -1); event.stopPropagation()" class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600 active:bg-gray-300">-</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="event.stopPropagation(); changeQty(${id}, -1)" class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold">-</button>
                         <span class="font-bold w-4 text-center">${qty}</span>
-                        <button onclick="changeQty(${id}, 1); event.stopPropagation()" class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold active:bg-purple-200">+</button>
+                        <button onclick="event.stopPropagation(); changeQty(${id}, 1)" class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold">+</button>
                     </div>
                 </div>
             `;
@@ -212,9 +162,15 @@ function toggleCart() {
 
 function submitOrder() {
     if (Object.keys(cart).length === 0) {
-        alert('El carrito está vacío');
+        alert('Carrito vacío');
         return;
     }
+    
+    const btn = document.getElementById('submitBtn');
+    const errDiv = document.getElementById('errorMsg');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+    errDiv.classList.add('hidden');
     
     const tableNum = document.getElementById('tableNum').value || '1';
     const note = document.getElementById('orderNote').value;
@@ -240,13 +196,20 @@ function submitOrder() {
             updateCartUI();
             toggleCart();
             document.getElementById('orderNote').value = '';
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
         })
-        .catch(err => alert('Error al enviar: ' + err.message));
+        .catch(err => {
+            errDiv.textContent = 'Error: ' + err.message;
+            errDiv.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Pedido';
+        });
 }
 
 function closeSuccess() {
     document.getElementById('successModal').classList.remove('show');
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').textContent = 'Confirmar Pedido';
 }
 
 renderMenu();
