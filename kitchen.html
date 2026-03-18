@@ -1,205 +1,543 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍳 厨房订单中心</title>
+    <title>厨房订单中心 - 智利比索显示</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        body { font-family: 'Noto Sans SC', sans-serif; background: #f1f5f9; }
-        .order-card { animation: slideIn 0.3s ease-out; border: 2px solid transparent; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .new-order { border-color: #ef4444; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
-        .date-selector { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .order-card { animation: slideIn 0.3s ease-out; border-left: 4px solid #3b82f6; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-cooking { background: #dbeafe; color: #1e40af; }
+        .status-ready { background: #d1fae5; color: #065f46; }
+        .status-done { background: #f3f4f6; color: #6b7280; opacity: 0.7; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="p-4">
-<div class="max-w-6xl mx-auto">
-    <!-- 头部 -->
-    <div class="date-selector rounded-2xl shadow-lg p-4 mb-6 text-white">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-6xl mx-auto">
+        <header class="bg-blue-600 text-white p-4 rounded-lg shadow mb-4 flex justify-between items-center">
             <div>
-                <h1 class="text-2xl font-bold mb-1">🍳 厨房订单中心</h1>
-                <p class="text-sm opacity-90">实时接收中 • <span id="connStatus">连接中...</span></p>
+                <h1 class="text-2xl font-bold">🍳 厨房订单中心</h1>
+                <p class="text-sm mt-1">今日日期: <span id="currentDate"></span> | 货币: CLP (智利比索)</p>
             </div>
-            <div class="flex gap-2 items-center bg-white bg-opacity-20 p-2 rounded-xl">
-                <button onclick="filterDate(-1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-3 py-2 rounded-lg font-bold text-sm">← 前一天</button>
-                <span id="dateDisplay" class="font-bold text-lg px-2">今天</span>
-                <button onclick="filterDate(1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-3 py-2 rounded-lg font-bold text-sm">后一天 →</button>
-                <button onclick="showAll()" class="bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg font-bold text-sm">显示全部</button>
+            <div class="text-right">
+                <div class="text-2xl font-bold" id="stats">0 单</div>
+                <div class="text-xs">处理中</div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <h3 class="font-bold text-yellow-800 mb-2">⏳ 待制作 <span id="count-pending" class="bg-yellow-500 text-white px-2 rounded-full text-xs">0</span></h3>
+                <div id="list-pending" class="space-y-2"></div>
+            </div>
+            <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <h3 class="font-bold text-blue-800 mb-2">🔥 制作中 <span id="count-cooking" class="bg-blue-500 text-white px-2 rounded-full text-xs">0</span></h3>
+                <div id="list-cooking" class="space-y-2"></div>
+            </div>
+            <div class="bg-green-50 p-3 rounded-lg border border-green-200">
+                <h3 class="font-bold text-green-800 mb-2">✅ 待取餐 <span id="count-ready" class="bg-green-500 text-white px-2 rounded-full text-xs">0</span></h3>
+                <div id="list-ready" class="space-y-2"></div>
             </div>
         </div>
-    </div>
 
-    <!-- 统计 -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="bg-white p-4 rounded-xl shadow text-center border-l-4 border-yellow-400">
-            <div class="text-2xl font-bold text-yellow-600" id="countPending">0</div>
-            <div class="text-xs text-gray-500">新订单</div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow text-center border-l-4 border-blue-400">
-            <div class="text-2xl font-bold text-blue-600" id="countCooking">0</div>
-            <div class="text-xs text-gray-500">制作中</div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow text-center border-l-4 border-green-400">
-            <div class="text-2xl font-bold text-green-600" id="countReady">0</div>
-            <div class="text-xs text-gray-500">待取餐</div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow text-center border-l-4 border-purple-400">
-            <div class="text-2xl font-bold text-purple-600" id="countDone">0</div>
-            <div class="text-xs text-gray-500">已完成</div>
+        <div class="bg-gray-200 p-4 rounded-lg">
+            <h3 class="font-bold text-gray-700 mb-2">📋 所有订单 (按时间倒序)</h3>
+            <div id="all-orders" class="space-y-2"></div>
         </div>
     </div>
 
-    <div id="ordersList" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl">
-            <div class="text-4xl mb-2">📭</div>
-            <p>等待订单...</p>
-        </div>
-    </div>
-</div>
-
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDlRWSAOCRX5MYsvilkMKYlwIazHEoSg4U",
-    authDomain: "restaurante-tocopilla.firebaseapp.com",
-    databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com",
-    projectId: "restaurante-tocopilla",
-    storageBucket: "restaurante-tocopilla.firebasestorage.app",
-    messagingSenderId: "322511272257",
-    appId: "1:322511272257:web:7fe43210274eaf2fae89c0"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let allOrders = []; // 存储所有订单
-let currentFilterDate = null; // null=显示全部
-
-// 获取今天日期字符串
-function getTodayString() {
-    const now = new Date();
-    return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-}
-
-// 监听所有订单（不过滤日期，确保能收到）
-db.ref('orders').orderByChild('timestamp').limitToLast(100).on('value', (snapshot) => {
-    document.getElementById('connStatus').textContent = '已连接';
-    allOrders = [];
-    snapshot.forEach(child => {
-        allOrders.push({ key: child.key, ...child.val() });
-    });
-    allOrders.reverse(); // 最新的在前
-    
-    // 自动判断日期（如果有date字段就用，没有就按timestamp算）
-    allOrders.forEach(order => {
-        if (!order.date && order.timestamp) {
-            const d = new Date(order.timestamp);
-            order.date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    <script>
+        // 🔥 智利比索格式化函数 - 千位用点，无小数
+        function formatCLP(amount) {
+            if (!amount) return '$0';
+            const num = Math.round(parseFloat(amount));
+            // 使用智利本地化格式：12.500 (一万两千五百比索)
+            return '$' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
-    });
-    
-    renderOrders();
-    updateStats();
-}, (error) => {
-    document.getElementById('connStatus').textContent = '连接失败: ' + error.message;
-});
 
-function filterDate(days) {
-    if (!currentFilterDate) currentFilterDate = getTodayString();
-    const d = new Date(currentFilterDate);
-    d.setDate(d.getDate() + days);
-    currentFilterDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    document.getElementById('dateDisplay').textContent = currentFilterDate === getTodayString() ? '今天' : currentFilterDate;
-    renderOrders();
-}
+        // Firebase配置 - 确保和之前一致
+        const firebaseConfig = {
+            databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-function showAll() {
-    currentFilterDate = null;
-    document.getElementById('dateDisplay').textContent = '全部';
-    renderOrders();
-}
-
-function renderOrders() {
-    const container = document.getElementById('ordersList');
-    
-    // 筛选订单
-    let orders = allOrders;
-    if (currentFilterDate) {
-        orders = allOrders.filter(o => o.date === currentFilterDate);
-    }
-    
-    if (orders.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl"><div class="text-4xl mb-2">📭</div><p>' + (currentFilterDate ? '该日期暂无订单' : '等待订单...') + '</p></div>';
-        return;
-    }
-    
-    container.innerHTML = orders.map(order => {
-        const time = order.timestamp ? new Date(order.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) : '--:--';
-        const isNew = order.status === 'pending';
+        // 智利时区日期
+        function getChileDate() {
+            const now = new Date();
+            const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+            const year = chileTime.getFullYear();
+            const month = String(chileTime.getMonth() + 1).padStart(2, '0');
+            const day = String(chileTime.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
         
-        return `
-            <div class="order-card bg-white rounded-xl shadow p-4 ${isNew ? 'new-order' : ''}">
-                <div class="flex justify-between items-start mb-3">
-                    <div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-2xl font-bold text-gray-800">桌${order.table || '-'}</span>
-                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">${time}</span>
-                            ${isNew ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">NEW</span>' : ''}
-                        </div>
-                        <div class="space-y-1 text-sm text-gray-600">
-                            ${order.items ? order.items.map(item => `
-                                <div class="flex items-center gap-2">
-                                    <span>${item.emoji || '🍽️'}</span>
-                                    <span>${item.name} x${item.qty}</span>
-                                </div>
-                            `).join('') : ''}
-                        </div>
-                        ${order.note ? `<div class="mt-2 text-xs bg-yellow-50 text-yellow-800 p-2 rounded">💬 ${order.note}</div>` : ''}
+        document.getElementById('currentDate').textContent = getChileDate();
+        // 监听今日订单
+        function listenOrders() {
+            const today = getChileDate();
+            
+            db.ref('orders').on('value', (snapshot) => {
+                const allOrders = snapshot.val() || {};
+                const todayOrders = {};
+                
+                Object.keys(allOrders).forEach(id => {
+                    if (allOrders[id].date === today) {
+                        todayOrders[id] = allOrders[id];
+                    }
+                });
+                
+                renderOrders(todayOrders);
+            });
+        }
+
+        function renderOrders(orders) {
+            const pending = [], cooking = [], ready = [], all = [];
+            
+            Object.keys(orders).forEach(id => {
+                const order = orders[id];
+                order.id = id;
+                
+                if (order.status === 'done') return; // 不显示已完成的
+                
+                all.push(order);
+                
+                if (order.status === 'ready') ready.push(order);
+                else if (order.status === 'cooking') cooking.push(order);
+                else pending.push(order);
+            });
+
+            // 更新计数
+            document.getElementById('count-pending').textContent = pending.length;
+            document.getElementById('count-cooking').textContent = cooking.length;
+            document.getElementById('count-ready').textContent = ready.length;
+            document.getElementById('stats').textContent = (pending.length + cooking.length) + ' 单处理中';
+
+            // 渲染各列表
+            renderList('list-pending', pending, 'pending');
+            renderList('list-cooking', cooking, 'cooking');
+            renderList('list-ready', ready, 'ready');
+            renderAllOrders(all);
+        }
+
+        function renderList(containerId, orders, currentStatus) {
+            const container = document.getElementById(containerId);
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center text-sm py-4">无订单</div>';
+                return;
+            }
+            
+            container.innerHTML = orders.map(order => {
+                const nextAction = currentStatus === 'pending' ? '开始制作' : 
+                                  currentStatus === 'cooking' ? '制作完成' : '已取餐';
+                const nextStatus = currentStatus === 'pending' ? 'cooking' : 
+                                  currentStatus === 'cooking' ? 'ready' : 'done';
+                const btnColor = currentStatus === 'pending' ? 'bg-yellow-500 hover:bg-yellow-600' : 
+                                currentStatus === 'cooking' ? 'bg-blue-500 hover:bg-blue-600' : 
+                                'bg-green-500 hover:bg-green-600';
+                
+                // 显示总价为CLP格式
+                const totalCLP = formatCLP(order.total);
+                
+                return `
+                <div class="bg-white p-3 rounded shadow order-card">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-gray-800">#${order.id.slice(-6)}</span>
+                        <span class="font-bold text-blue-600">${totalCLP}</span>
+                    </div>
+                    <div class="text-sm space-y-1 mb-2">
+                        ${(order.items || []).map(item => `
+                            <div class="flex justify-between">
+                                <span>${item.quantity}x ${item.name}</span>
+                                <span class="text-gray-500 text-xs">${formatCLP(item.price * item.quantity)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button onclick="updateStatus('${order.id}', '${nextStatus}')" 
+                            class="w-full ${btnColor} text-white py-1 rounded text-sm font-bold transition">
+                        ${nextAction} →
+                    </button>
+                    <div class="text-xs text-gray-400 mt-1 text-center">
+                        ${new Date(order.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}
                     </div>
                 </div>
-                <div class="flex justify-between items-center pt-3 border-t border-gray-100">
-                    <div class="text-xl font-bold text-red-600">$${order.total?.toLocaleString() || 0}</div>
-                    <div class="flex gap-2">
-                        ${order.status === 'pending' ? 
-                            `<button onclick="setStatus('${order.key}', 'cooking')" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm">开始制作</button>` :
-                         order.status === 'cooking' ? 
-                            `<button onclick="setStatus('${order.key}', 'ready')" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm">制作完成</button>` :
-                         order.status === 'ready' ? 
-                            `<button onclick="setStatus('${order.key}', 'done')" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold text-sm">已取餐</button>` :
-                            `<div class="text-gray-400 text-sm">已完成</div>`
-                        }
-                        <button onclick="deleteOrder('${order.key}')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm">删除</button>
+                `;
+            }).join('');
+        }
+
+        function renderAllOrders(orders) {
+            const container = document.getElementById('all-orders');
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="text-gray-400 text-center">今日暂无订单</div>';
+                return;
+            }
+            
+            // 按时间倒序
+            const sorted = orders.sort((a, b) => b.timestamp - a.timestamp);
+            
+            container.innerHTML = sorted.map(order => {
+                const statusText = {
+                    'pending': '⏳ 待制作',
+                    'cooking': '🔥 制作中',
+                    'ready': '✅ 待取餐',
+                    'done': '✓ 已完成'
+                }[order.status] || order.status;
+                
+                const statusColor = {
+                    'pending': 'text-yellow-600 bg-yellow-100',
+                    'cooking': 'text-blue-600 bg-blue-100',
+                    'ready': 'text-green-600 bg-green-100',
+                    'done': 'text-gray-600 bg-gray-100'
+                }[order.status] || 'text-gray-600';
+                
+                return `
+                <div class="bg-white p-3 rounded shadow flex justify-between items-center">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold">#${order.id.slice(-6)}</span>
+                            <span class="text-xs px-2 py-1 rounded ${statusColor}">${statusText}</span>
+                            ${order.paymentStatus === 'paid' ? '<span class="text-xs bg-green-500 text-white px-1 rounded">已付款</span>' : '<span class="text-xs bg-red-100 text-red-600 px-1 rounded">未付款</span>'}
+                        </div>
+                        <div class="text-sm text-gray-600 mt-1">
+                            ${(order.items || []).map(i => i.quantity + 'x ' + i.name).join(', ')}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-lg text-gray-800">${formatCLP(order.total)}</div>
+                        <div class="text-xs text-gray-400">${new Date(order.timestamp).toLocaleTimeString('es-CL')}</div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function updateStatus(orderId, status) {
+            db.ref('orders/' + orderId).update({
+                status: status,
+                updatedAt: Date.now()
+            }).catch(err => alert('更新失败: ' + err.message));
+        }
+
+        listenOrders();
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesero - Cobros CLP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        .order-card { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-cooking { background: #dbeafe; color: #1e40af; }
+        .status-ready { background: #d1fae5; color: #065f46; }
+        .status-done { background: #f3f4f6; color: #374151; }
+        .payment-paid { background: #10b981; color: white; }
+        .payment-unpaid { background: #ef4444; color: white; }
+        .clp-amount { font-family: 'Courier New', monospace; letter-spacing: -0.5px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-4xl mx-auto p-4">
+        <header class="bg-blue-600 text-white p-4 rounded-lg shadow mb-4">
+            <h1 class="text-2xl font-bold">🍽️ Panel de Mesero - Cobros</h1>
+            <p class="text-sm mt-1">Fecha Chile: <span id="currentDate"></span> | Moneda: CLP ($)</p>
+            <div class="mt-2 flex gap-2">
+                <button onclick="showSection('today')" class="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold">Pedidos Hoy</button>
+                <button onclick="showSection('history')" class="bg-blue-700 text-white px-3 py-1 rounded text-sm">Historial</button>
+            </div>
+        </header>
+        
+        <div id="todaySection">
+            <div class="bg-white p-4 rounded-lg shadow mb-4">
+                <h2 class="text-lg font-bold mb-2">📊 Resumen del Día (CLP)</h2>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-blue-50 p-2 rounded">
+                        <div class="text-2xl font-bold text-blue-600" id="totalOrders">0</div>
+                        <div class="text-xs">Total Pedidos</div>
+                    </div>
+                    <div class="bg-green-50 p-2 rounded">
+                        <div class="text-2xl font-bold text-green-600 clp-amount" id="totalRevenue">$0</div>
+                        <div class="text-xs">Ingresos Confirmados</div>
+                    </div>
+                    <div class="bg-yellow-50 p-2 rounded">
+                        <div class="text-2xl font-bold text-yellow-600 clp-amount" id="pendingPayment">$0</div>
+                        <div class="text-xs">Por Cobrar</div>
                     </div>
                 </div>
             </div>
-        `;
-    }).join('');
-}
+            <div id="ordersList" class="space-y-3">
+                <div class="text-center text-gray-500 py-8">Cargando pedidos...</div>
+            </div>
+        </div>
 
-function updateStats() {
-    let orders = allOrders;
-    if (currentFilterDate) orders = allOrders.filter(o => o.date === currentFilterDate);
-    
-    document.getElementById('countPending').textContent = orders.filter(o => o.status === 'pending').length;
-    document.getElementById('countCooking').textContent = orders.filter(o => o.status === 'cooking').length;
-    document.getElementById('countReady').textContent = orders.filter(o => o.status === 'ready').length;
-    document.getElementById('countDone').textContent = orders.filter(o => o.status === 'done').length;
-}
+        <div id="historySection" class="hidden">
+            <div class="bg-white p-4 rounded-lg shadow mb-4">
+                <h3 class="font-bold mb-2">Buscar Historial por Fecha</h3>
+                <input type="date" id="historyDate" class="w-full p-2 border rounded mb-2">
+                <button onclick="loadHistory()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">Buscar</button>
+            </div>
+            <div id="historyStats" class="hidden bg-green-100 p-3 rounded mb-3 text-center font-bold text-green-800"></div>
+            <div id="historyList" class="space-y-3"></div>
+        </div>
+    </div>
 
-function setStatus(key, status) {
-    db.ref(`orders/${key}/status`).set(status);
-}
+    <script>
+        // 🔥 智利比索格式化 - 西班牙语格式 ($12.500)
+        function formatCLP(amount) {
+            if (!amount || isNaN(amount)) return '$0';
+            const num = Math.round(parseFloat(amount));
+            // 智利格式：点作为千位分隔符，没有小数
+            return '$' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
 
-function deleteOrder(key) {
-    if (confirm('确定删除？')) db.ref(`orders/${key}`).remove();
-}
-
-// 初始化显示今天
-filterDate(0);
-</script>
+        const firebaseConfig = {
+            databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        
+        function getChileDate() {
+            const now = new Date();
+            const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+            const year = chileTime.getFullYear();
+            const month = String(chileTime.getMonth() + 1).padStart(2, '0');
+            const day = String(chileTime.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        document.getElementById('currentDate').textContent = getChileDate();
+        document.getElementById('historyDate').value = getChileDate();
+        
+        let todayOrders = {};
+        
+        function listenToOrders() {
+            const today = getChileDate();
+            
+            db.ref('orders').on('value', (snapshot) => {
+                const allOrders = snapshot.val() || {};
+                todayOrders = {};
+                
+                Object.keys(allOrders).forEach(orderId => {
+                    const order = allOrders[orderId];
+                    if (order && order.date === today) {
+                        todayOrders[orderId] = order;
+                    }
+                });
+                
+                renderOrders(todayOrders);
+                updateSummary(todayOrders);
+            }, (error) => {
+                console.error("Error:", error);
+                document.getElementById('ordersList').innerHTML = 
+                    `<div class="text-red-500 text-center py-4">Error de conexión</div>`;
+            });
+        }
+        
+        function renderOrders(orders) {
+            const container = document.getElementById('ordersList');
+            
+            if (Object.keys(orders).length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 py-8">No hay pedidos para hoy</div>';
+                return;
+            }
+            
+            const sortedIds = Object.keys(orders).sort((a, b) => {
+                return (orders[b].timestamp || 0) - (orders[a].timestamp || 0);
+            });
+            
+            container.innerHTML = sortedIds.map(id => {
+                const order = orders[id];
+                const statusClass = {
+                    'pending': 'status-pending',
+                    'cooking': 'status-cooking', 
+                    'ready': 'status-ready',
+                    'done': 'status-done'
+                }[order.status] || 'status-pending';
+                
+                const isPaid = order.paymentStatus === 'paid';
+                const paymentClass = isPaid ? 'payment-paid' : 'payment-unpaid';
+                const paymentText = isPaid ? '✓ PAGADO' : '⚠ POR COBRAR';
+                
+                // 计算单项小计（CLP格式）
+                const itemsHtml = (order.items || []).map(item => {
+                    const subtotal = item.price * item.quantity;
+                    return `
+                        <div class="flex justify-between text-sm py-1 border-b border-gray-100">
+                            <span>${item.quantity}x ${item.name}</span>
+                            <span class="font-mono text-gray-600">${formatCLP(subtotal)}</span>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                <div class="order-card bg-white rounded-lg shadow p-4 border-l-4 ${isPaid ? 'border-green-500' : 'border-red-500'}">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <span class="text-xs text-gray-500 font-mono">#${id.slice(-6)}</span>
+                            <span class="ml-2 px-2 py-1 rounded text-xs font-bold ${statusClass}">
+                                ${order.status === 'pending' ? 'PENDIENTE' : 
+                                  order.status === 'cooking' ? 'COCINANDO' : 
+                                  order.status === 'ready' ? 'LISTO' : 'ENTREGADO'}
+                            </span>
+                        </div>
+                        <span class="text-xl font-bold text-gray-800 clp-amount">${formatCLP(order.total)}</span>
+                    </div>
+                    
+                    <div class="space-y-1 mb-3 bg-gray-50 p-2 rounded">
+                        ${itemsHtml}
+                    </div>
+                    
+                    <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+                        <span class="text-xs text-gray-500">${new Date(order.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</span>
+                        <span class="px-3 py-1 rounded text-xs font-bold ${paymentClass}">${paymentText}</span>
+                    </div>
+                    
+                    ${!isPaid ? `
+                    <div class="mt-3 grid grid-cols-3 gap-2">
+                        <button onclick="processPayment('${id}', 'cash')" class="bg-green-600 text-white py-2 rounded text-sm font-bold hover:bg-green-700 transition">
+                            💵 Efectivo
+                        </button>
+                        <button onclick="processPayment('${id}', 'card')" class="bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700 transition">
+                            💳 Tarjeta
+                        </button>
+                        <button onclick="processPayment('${id}', 'transfer')" class="bg-purple-600 text-white py-2 rounded text-sm font-bold hover:bg-purple-700 transition">
+                            📱 Transferencia
+                        </button>
+                    </div>
+                    ` : `
+                    <div class="mt-2 text-xs text-green-700 font-bold text-center bg-green-50 py-1 rounded">
+                        ✓ Pagado con: ${order.paymentMethod || 'desconocido'}
+                    </div>
+                    `}
+                </div>
+                `;
+            }).join('');
+        }
+        function updateSummary(orders) {
+            const totalOrders = Object.keys(orders).length;
+            let revenue = 0;
+            let pending = 0;
+            
+            Object.values(orders).forEach(order => {
+                const total = parseFloat(order.total) || 0;
+                if (order.paymentStatus === 'paid') {
+                    revenue += total;
+                } else {
+                    pending += total;
+                }
+            });
+            
+            document.getElementById('totalOrders').textContent = totalOrders;
+            document.getElementById('totalRevenue').textContent = formatCLP(revenue);
+            document.getElementById('pendingPayment').textContent = formatCLP(pending);
+        }
+        
+        function processPayment(orderId, method) {
+            const methodNames = {
+                'cash': 'Efectivo',
+                'card': 'Tarjeta', 
+                'transfer': 'Transferencia'
+            };
+            
+            if (!confirm(`¿Confirmar pago de ${formatCLP(todayOrders[orderId]?.total || 0)} con ${methodNames[method]}?`)) return;
+            
+            db.ref('orders/' + orderId).update({
+                paymentStatus: 'paid',
+                paymentMethod: methodNames[method],
+                paidAt: Date.now()
+            }).then(() => {
+                alert('✓ Pago registrado: ' + formatCLP(todayOrders[orderId].total));
+            }).catch(err => {
+                alert('Error: ' + err.message);
+            });
+        }
+        
+        function showSection(section) {
+            if (section === 'today') {
+                document.getElementById('todaySection').classList.remove('hidden');
+                document.getElementById('historySection').classList.add('hidden');
+            } else {
+                document.getElementById('todaySection').classList.add('hidden');
+                document.getElementById('historySection').classList.remove('hidden');
+            }
+        }
+        
+        function loadHistory() {
+            const date = document.getElementById('historyDate').value;
+            const container = document.getElementById('historyList');
+            const statsDiv = document.getElementById('historyStats');
+            
+            container.innerHTML = '<div class="text-center py-4 text-gray-500">Cargando...</div>';
+            statsDiv.classList.add('hidden');
+            
+            db.ref('orders').once('value', (snapshot) => {
+                const allOrders = snapshot.val() || {};
+                const filtered = {};
+                
+                Object.keys(allOrders).forEach(id => {
+                    if (allOrders[id].date === date) {
+                        filtered[id] = allOrders[id];
+                    }
+                });
+                
+                if (Object.keys(filtered).length === 0) {
+                    container.innerHTML = `<div class="text-center text-gray-400 py-8">No hay pedidos para el ${date}</div>`;
+                    return;
+                }
+                
+                // 计算历史收入
+                let dayRevenue = 0;
+                let totalDay = 0;
+                Object.values(filtered).forEach(o => {
+                    totalDay += o.total || 0;
+                    if (o.paymentStatus === 'paid') dayRevenue += o.total || 0;
+                });
+                
+                statsDiv.innerHTML = `
+                    Total ventas: <span class="text-green-600">${formatCLP(dayRevenue)}</span> 
+                    (${Object.keys(filtered).length} pedidos) 
+                    ${dayRevenue < totalDay ? `<br><span class="text-red-600 text-sm">Por cobrar: ${formatCLP(totalDay - dayRevenue)}</span>` : ''}
+                `;
+                statsDiv.classList.remove('hidden');
+                
+                container.innerHTML = Object.keys(filtered)
+                    .sort((a,b) => filtered[b].timestamp - filtered[a].timestamp)
+                    .map(id => {
+                        const o = filtered[id];
+                        return `
+                        <div class="bg-white p-3 rounded shadow border-l-4 ${o.paymentStatus==='paid'?'border-green-500':'border-red-500'}">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-gray-800">#${id.slice(-6)}</span>
+                                <span class="text-lg font-bold clp-amount ${o.paymentStatus==='paid'?'text-green-600':'text-red-600'}">
+                                    ${formatCLP(o.total)}
+                                </span>
+                            </div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                ${(o.items || []).map(i => i.quantity + 'x ' + i.name).join(', ')}
+                            </div>
+                            <div class="flex justify-between items-center mt-2 text-xs">
+                                <span class="text-gray-400">${new Date(o.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</span>
+                                <span class="${o.paymentStatus==='paid' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}">
+                                    ${o.paymentStatus==='paid' ? `✓ ${o.paymentMethod}` : '⚠ SIN PAGAR'}
+                                </span>
+                            </div>
+                        </div>`;
+                    }).join('');
+            });
+        }
+        
+        listenToOrders();
+    </script>
 </body>
 </html>
