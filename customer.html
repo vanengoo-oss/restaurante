@@ -65,7 +65,6 @@
 </div>
 
 <script>
-// ===== Firebase配置（已填好） =====
 const firebaseConfig = {
     apiKey: "AIzaSyDlRWSAOCRX5MYsvilkMKYlwIazHEoSg4U",
     authDomain: "restaurante-tocopilla.firebaseapp.com",
@@ -84,11 +83,10 @@ const menu = [
     { id: 2, name: 'Pollo Kung Pao', price: 7500, img: 'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=400', emoji: '🍗' },
     { id: 3, name: 'Arroz Frito', price: 5500, img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400', emoji: '🍚' },
     { id: 4, name: 'Dumplings', price: 6000, img: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400', emoji: '🥟' },
-    { id: 5, name: 'Bebida', price: 2500, img: 'https://images.unsplash.com/photo-162248-1622483767028-3f66f32aef97?w=400', emoji: '🥤' }
+    { id: 5, name: 'Bebida', price: 2500, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400', emoji: '🥤' }
 ];
 
 let cart = {};
-
 function renderMenu() {
     const grid = document.getElementById('menuGrid');
     grid.innerHTML = menu.map(item => `
@@ -176,9 +174,14 @@ function submitOrder() {
     const note = document.getElementById('orderNote').value;
     const total = parseInt(document.getElementById('totalPrice').textContent.replace(/\./g, ''));
     
+    // 获取今天日期（智利时区 UTC-3）
+    const now = new Date();
+    const chileDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }); // YYYY-MM-DD格式
+    
     const order = {
         id: Date.now(),
         table: tableNum,
+        date: chileDate, // ← 这行是关键！必须加！
         items: Object.entries(cart).map(([id, qty]) => {
             const item = menu.find(m => m.id == id);
             return { name: item.name, price: item.price, qty: qty, emoji: item.emoji, img: item.img };
