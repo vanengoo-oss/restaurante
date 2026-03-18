@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mesero - Cobros CLP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -10,20 +9,14 @@
     <style>
         .order-card { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-cooking { background: #dbeafe; color: #1e40af; }
-        .status-ready { background: #d1fae5; color: #065f46; }
-        .status-done { background: #f3f4f6; color: #374151; }
-        .payment-paid { background: #10b981; color: white; }
-        .payment-unpaid { background: #ef4444; color: white; }
-        .clp-amount { font-family: 'Courier New', monospace; letter-spacing: -0.5px; }
+        .clp-font { font-family: 'Courier New', monospace; letter-spacing: -0.5px; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="max-w-4xl mx-auto p-4">
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
         <header class="bg-blue-600 text-white p-4 rounded-lg shadow mb-4">
-            <h1 class="text-2xl font-bold">🍽️ Panel de Mesero - Cobros</h1>
-            <p class="text-sm mt-1">Fecha Chile: <span id="currentDate"></span> | Moneda: CLP ($)</p>
+            <h1 class="text-2xl font-bold">🍽️ Panel de Mesero</h1>
+            <p class="text-sm mt-1">Fecha Chile: <span id="currentDate"></span> | 💰 Moneda: CLP ($)</p>
             <div class="mt-2 flex gap-2">
                 <button onclick="showSection('today')" class="bg-white text-blue-600 px-3 py-1 rounded text-sm font-bold">Pedidos Hoy</button>
                 <button onclick="showSection('history')" class="bg-blue-700 text-white px-3 py-1 rounded text-sm">Historial</button>
@@ -32,30 +25,29 @@
         
         <div id="todaySection">
             <div class="bg-white p-4 rounded-lg shadow mb-4">
-                <h2 class="text-lg font-bold mb-2">📊 Resumen del Día (CLP)</h2>
+                <h2 class="text-lg font-bold mb-2">📊 Resumen del Día</h2>
                 <div class="grid grid-cols-3 gap-2 text-center">
                     <div class="bg-blue-50 p-2 rounded">
                         <div class="text-2xl font-bold text-blue-600" id="totalOrders">0</div>
                         <div class="text-xs">Total Pedidos</div>
                     </div>
                     <div class="bg-green-50 p-2 rounded">
-                        <div class="text-2xl font-bold text-green-600 clp-amount" id="totalRevenue">$0</div>
-                        <div class="text-xs">Ingresos Confirmados</div>
+                        <div class="text-2xl font-bold text-green-600 clp-font" id="totalRevenue">$0</div>
+                        <div class="text-xs">Ingresos (CLP)</div>
                     </div>
                     <div class="bg-yellow-50 p-2 rounded">
-                        <div class="text-2xl font-bold text-yellow-600 clp-amount" id="pendingPayment">$0</div>
-                        <div class="text-xs">Por Cobrar</div>
+                        <div class="text-2xl font-bold text-yellow-600 clp-font" id="pendingPayment">$0</div>
+                        <div class="text-xs">Por Cobrar (CLP)</div>
                     </div>
                 </div>
             </div>
-            <div id="ordersList" class="space-y-3">
-                <div class="text-center text-gray-500 py-8">Cargando pedidos...</div>
-            </div>
+            
+            <div id="ordersList" class="space-y-3"></div>
         </div>
 
         <div id="historySection" class="hidden">
             <div class="bg-white p-4 rounded-lg shadow mb-4">
-                <h3 class="font-bold mb-2">Buscar Historial por Fecha</h3>
+                <h3 class="font-bold mb-2">Buscar Historial</h3>
                 <input type="date" id="historyDate" class="w-full p-2 border rounded mb-2">
                 <button onclick="loadHistory()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">Buscar</button>
             </div>
@@ -65,11 +57,10 @@
     </div>
 
     <script>
-        // 🔥 智利比索格式化 - 西班牙语格式 ($12.500)
+        // 🔥 智利比索格式化：点作为千位分隔符 (12.500)
         function formatCLP(amount) {
             if (!amount || isNaN(amount)) return '$0';
             const num = Math.round(parseFloat(amount));
-            // 智利格式：点作为千位分隔符，没有小数
             return '$' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
 
@@ -82,15 +73,11 @@
         function getChileDate() {
             const now = new Date();
             const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
-            const year = chileTime.getFullYear();
-            const month = String(chileTime.getMonth() + 1).padStart(2, '0');
-            const day = String(chileTime.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return `${chileTime.getFullYear()}-${String(chileTime.getMonth()+1).padStart(2,'0')}-${String(chileTime.getDate()).padStart(2,'0')}`;
         }
         
         document.getElementById('currentDate').textContent = getChileDate();
         document.getElementById('historyDate').value = getChileDate();
-        
         let todayOrders = {};
         
         function listenToOrders() {
@@ -109,10 +96,6 @@
                 
                 renderOrders(todayOrders);
                 updateSummary(todayOrders);
-            }, (error) => {
-                console.error("Error:", error);
-                document.getElementById('ordersList').innerHTML = 
-                    `<div class="text-red-500 text-center py-4">Error de conexión</div>`;
             });
         }
         
@@ -130,66 +113,48 @@
             
             container.innerHTML = sortedIds.map(id => {
                 const order = orders[id];
-                const statusClass = {
-                    'pending': 'status-pending',
-                    'cooking': 'status-cooking', 
-                    'ready': 'status-ready',
-                    'done': 'status-done'
-                }[order.status] || 'status-pending';
-                
                 const isPaid = order.paymentStatus === 'paid';
-                const paymentClass = isPaid ? 'payment-paid' : 'payment-unpaid';
-                const paymentText = isPaid ? '✓ PAGADO' : '⚠ POR COBRAR';
-                
-                // 计算单项小计（CLP格式）
-                const itemsHtml = (order.items || []).map(item => {
-                    const subtotal = item.price * item.quantity;
-                    return `
-                        <div class="flex justify-between text-sm py-1 border-b border-gray-100">
-                            <span>${item.quantity}x ${item.name}</span>
-                            <span class="font-mono text-gray-600">${formatCLP(subtotal)}</span>
-                        </div>
-                    `;
-                }).join('');
                 
                 return `
                 <div class="order-card bg-white rounded-lg shadow p-4 border-l-4 ${isPaid ? 'border-green-500' : 'border-red-500'}">
                     <div class="flex justify-between items-start mb-2">
                         <div>
                             <span class="text-xs text-gray-500 font-mono">#${id.slice(-6)}</span>
-                            <span class="ml-2 px-2 py-1 rounded text-xs font-bold ${statusClass}">
-                                ${order.status === 'pending' ? 'PENDIENTE' : 
-                                  order.status === 'cooking' ? 'COCINANDO' : 
-                                  order.status === 'ready' ? 'LISTO' : 'ENTREGADO'}
+                            <span class="ml-2 px-2 py-1 rounded text-xs font-bold ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cooking' ? 'bg-blue-100 text-blue-800' : order.status === 'ready' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                                ${order.status === 'pending' ? 'PENDIENTE' : order.status === 'cooking' ? 'COCINANDO' : order.status === 'ready' ? 'LISTO' : 'ENTREGADO'}
                             </span>
                         </div>
-                        <span class="text-xl font-bold text-gray-800 clp-amount">${formatCLP(order.total)}</span>
+                        <span class="text-2xl font-bold text-gray-800 clp-font">${formatCLP(order.total)}</span>
                     </div>
                     
-                    <div class="space-y-1 mb-3 bg-gray-50 p-2 rounded">
-                        ${itemsHtml}
+                    <div class="space-y-1 mb-3 bg-gray-50 p-2 rounded text-sm">
+                        ${(order.items || []).map(item => {
+                            const subtotal = item.price * item.quantity;
+                            return `
+                                <div class="flex justify-between">
+                                    <span>${item.quantity}x ${item.name}</span>
+                                    <span class="text-gray-600 font-mono">${formatCLP(subtotal)}</span>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                     
-                    <div class="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <div class="flex justify-between items-center pt-2 border-t">
                         <span class="text-xs text-gray-500">${new Date(order.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</span>
-                        <span class="px-3 py-1 rounded text-xs font-bold ${paymentClass}">${paymentText}</span>
+                        <span class="px-2 py-1 rounded text-xs font-bold ${isPaid ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}">
+                            ${isPaid ? '✓ PAGADO' : '⚠ POR COBRAR'}
+                        </span>
                     </div>
                     
                     ${!isPaid ? `
                     <div class="mt-3 grid grid-cols-3 gap-2">
-                        <button onclick="processPayment('${id}', 'cash')" class="bg-green-600 text-white py-2 rounded text-sm font-bold hover:bg-green-700 transition">
-                            💵 Efectivo
-                        </button>
-                        <button onclick="processPayment('${id}', 'card')" class="bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700 transition">
-                            💳 Tarjeta
-                        </button>
-                        <button onclick="processPayment('${id}', 'transfer')" class="bg-purple-600 text-white py-2 rounded text-sm font-bold hover:bg-purple-700 transition">
-                            📱 Transferencia
-                        </button>
+                        <button onclick="processPayment('${id}', 'cash')" class="bg-green-600 text-white py-2 rounded text-sm font-bold hover:bg-green-700">💵 Efectivo</button>
+                        <button onclick="processPayment('${id}', 'card')" class="bg-blue-600 text-white py-2 rounded text-sm font-bold hover:bg-blue-700">💳 Tarjeta</button>
+                        <button onclick="processPayment('${id}', 'transfer')" class="bg-purple-600 text-white py-2 rounded text-sm font-bold hover:bg-purple-700">📱 Transferencia</button>
                     </div>
                     ` : `
                     <div class="mt-2 text-xs text-green-700 font-bold text-center bg-green-50 py-1 rounded">
-                        ✓ Pagado con: ${order.paymentMethod || 'desconocido'}
+                        ✓ Método: ${order.paymentMethod || 'N/A'}
                     </div>
                     `}
                 </div>
@@ -216,33 +181,23 @@
         }
         
         function processPayment(orderId, method) {
-            const methodNames = {
-                'cash': 'Efectivo',
-                'card': 'Tarjeta', 
-                'transfer': 'Transferencia'
-            };
+            const methodNames = { 'cash': 'Efectivo', 'card': 'Tarjeta', 'transfer': 'Transferencia' };
+            const amount = todayOrders[orderId]?.total || 0;
             
-            if (!confirm(`¿Confirmar pago de ${formatCLP(todayOrders[orderId]?.total || 0)} con ${methodNames[method]}?`)) return;
+            if (!confirm(`¿Confirmar pago de ${formatCLP(amount)} con ${methodNames[method]}?`)) return;
             
             db.ref('orders/' + orderId).update({
                 paymentStatus: 'paid',
                 paymentMethod: methodNames[method],
                 paidAt: Date.now()
             }).then(() => {
-                alert('✓ Pago registrado: ' + formatCLP(todayOrders[orderId].total));
-            }).catch(err => {
-                alert('Error: ' + err.message);
-            });
+                alert('✓ Pago registrado: ' + formatCLP(amount));
+            }).catch(err => alert('Error: ' + err.message));
         }
         
         function showSection(section) {
-            if (section === 'today') {
-                document.getElementById('todaySection').classList.remove('hidden');
-                document.getElementById('historySection').classList.add('hidden');
-            } else {
-                document.getElementById('todaySection').classList.add('hidden');
-                document.getElementById('historySection').classList.remove('hidden');
-            }
+            document.getElementById('todaySection').classList.toggle('hidden', section !== 'today');
+            document.getElementById('historySection').classList.toggle('hidden', section !== 'history');
         }
         
         function loadHistory() {
@@ -258,9 +213,7 @@
                 const filtered = {};
                 
                 Object.keys(allOrders).forEach(id => {
-                    if (allOrders[id].date === date) {
-                        filtered[id] = allOrders[id];
-                    }
+                    if (allOrders[id].date === date) filtered[id] = allOrders[id];
                 });
                 
                 if (Object.keys(filtered).length === 0) {
@@ -268,19 +221,13 @@
                     return;
                 }
                 
-                // 计算历史收入
-                let dayRevenue = 0;
-                let totalDay = 0;
+                let dayRevenue = 0, totalDay = 0;
                 Object.values(filtered).forEach(o => {
                     totalDay += o.total || 0;
                     if (o.paymentStatus === 'paid') dayRevenue += o.total || 0;
                 });
                 
-                statsDiv.innerHTML = `
-                    Total ventas: <span class="text-green-600">${formatCLP(dayRevenue)}</span> 
-                    (${Object.keys(filtered).length} pedidos) 
-                    ${dayRevenue < totalDay ? `<br><span class="text-red-600 text-sm">Por cobrar: ${formatCLP(totalDay - dayRevenue)}</span>` : ''}
-                `;
+                statsDiv.innerHTML = `Total: <span class="text-green-700">${formatCLP(dayRevenue)}</span> / ${Object.keys(filtered).length} pedidos`;
                 statsDiv.classList.remove('hidden');
                 
                 container.innerHTML = Object.keys(filtered)
@@ -291,18 +238,12 @@
                         <div class="bg-white p-3 rounded shadow border-l-4 ${o.paymentStatus==='paid'?'border-green-500':'border-red-500'}">
                             <div class="flex justify-between items-center">
                                 <span class="font-bold text-gray-800">#${id.slice(-6)}</span>
-                                <span class="text-lg font-bold clp-amount ${o.paymentStatus==='paid'?'text-green-600':'text-red-600'}">
-                                    ${formatCLP(o.total)}
-                                </span>
+                                <span class="text-lg font-bold clp-font ${o.paymentStatus==='paid'?'text-green-600':'text-red-600'}">${formatCLP(o.total)}</span>
                             </div>
-                            <div class="text-sm text-gray-600 mt-1">
-                                ${(o.items || []).map(i => i.quantity + 'x ' + i.name).join(', ')}
-                            </div>
+                            <div class="text-sm text-gray-600 mt-1">${(o.items || []).map(i => i.quantity + 'x ' + i.name).join(', ')}</div>
                             <div class="flex justify-between items-center mt-2 text-xs">
                                 <span class="text-gray-400">${new Date(o.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</span>
-                                <span class="${o.paymentStatus==='paid' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}">
-                                    ${o.paymentStatus==='paid' ? `✓ ${o.paymentMethod}` : '⚠ SIN PAGAR'}
-                                </span>
+                                <span class="${o.paymentStatus==='paid' ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}">${o.paymentStatus==='paid' ? `✓ ${o.paymentMethod}` : '⚠ SIN PAGAR'}</span>
                             </div>
                         </div>`;
                     }).join('');
