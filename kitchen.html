@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍳 厨房订单 - 历史记录版</title>
+    <title>🍳 厨房订单中心</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -18,37 +18,23 @@
 </head>
 <body class="p-4">
 <div class="max-w-6xl mx-auto">
-    <!-- 日期选择栏 -->
+    <!-- 头部 -->
     <div class="date-selector rounded-2xl shadow-lg p-4 mb-6 text-white">
         <div class="flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-bold mb-1">🍳 厨房订单中心</h1>
-                <p class="text-sm opacity-90" id="currentDateDisplay">2026-03-18</p>
+                <p class="text-sm opacity-90">实时接收中 • <span id="connStatus">连接中...</span></p>
             </div>
-            <div class="flex gap-3 items-center bg-white bg-opacity-20 p-2 rounded-xl">
-                <button onclick="changeDate(-1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-bold">← 前一天</button>
-                <input type="date" id="datePicker" class="bg-white text-gray-800 px-3 py-2 rounded-lg font-bold" onchange="selectDate(this.value)">
-                <button onclick="changeDate(1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-4 py-2 rounded-lg font-bold">后一天 →</button>
-                <button onclick="goToday()" class="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-lg font-bold text-sm">今天</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 收入统计（按日） -->
-    <div class="bg-white rounded-2xl shadow p-4 mb-6">
-        <div class="flex justify-between items-center">
-            <div>
-                <div class="text-sm text-gray-500">📅 <span id="statsDate">今日</span>收入</div>
-                <div class="text-3xl font-bold text-red-600">$<span id="dailyTotal">0</span> CLP</div>
-            </div>
-            <div class="text-right">
-                <div class="text-sm text-gray-500">已完成订单</div>
-                <div class="text-2xl font-bold text-green-600" id="dailyCount">0</div>
+            <div class="flex gap-2 items-center bg-white bg-opacity-20 p-2 rounded-xl">
+                <button onclick="filterDate(-1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-3 py-2 rounded-lg font-bold text-sm">← 前一天</button>
+                <span id="dateDisplay" class="font-bold text-lg px-2">今天</span>
+                <button onclick="filterDate(1)" class="bg-white bg-opacity-30 hover:bg-opacity-50 text-white px-3 py-2 rounded-lg font-bold text-sm">后一天 →</button>
+                <button onclick="showAll()" class="bg-yellow-400 text-yellow-900 px-3 py-2 rounded-lg font-bold text-sm">显示全部</button>
             </div>
         </div>
     </div>
 
-    <!-- 统计卡片 -->
+    <!-- 统计 -->
     <div class="grid grid-cols-4 gap-4 mb-6">
         <div class="bg-white p-4 rounded-xl shadow text-center border-l-4 border-yellow-400">
             <div class="text-2xl font-bold text-yellow-600" id="countPending">0</div>
@@ -68,17 +54,15 @@
         </div>
     </div>
 
-    <!-- 订单列表 -->
     <div id="ordersList" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl">
             <div class="text-4xl mb-2">📭</div>
-            <p>该日期暂无订单</p>
+            <p>等待订单...</p>
         </div>
     </div>
 </div>
 
 <script>
-// Firebase配置（同前）
 const firebaseConfig = {
     apiKey: "AIzaSyDlRWSAOCRX5MYsvilkMKYlwIazHEoSg4U",
     authDomain: "restaurante-tocopilla.firebaseapp.com",
@@ -92,106 +76,81 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let currentDate = getTodayString();
-let ordersListener = null;
+let allOrders = []; // 存储所有订单
+let currentFilterDate = null; // null=显示全部
 
-// 获取智利日期（UTC-3）
+// 获取今天日期字符串
 function getTodayString() {
     const now = new Date();
-    // 转换为智利时间（UTC-3）
-    const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
-    return chileTime.getFullYear() + '-' + 
-           String(chileTime.getMonth()+1).padStart(2,'0') + '-' + 
-           String(chileTime.getDate()).padStart(2,'0');
+    return now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 }
 
-// 初始化
-document.getElementById('datePicker').value = currentDate;
-document.getElementById('currentDateDisplay').textContent = formatDate(currentDate);
-loadOrders(currentDate);
-
-// 每分钟检查是否过凌晨，自动刷新
-setInterval(() => {
-    const now = getTodayString();
-    if (now !== currentDate && document.getElementById('autoRefresh').checked) {
-        location.reload(); // 过了凌晨自动刷新页面
-    }
-}, 60000);
-
-function formatDate(dateStr) {
-    const [y, m, d] = dateStr.split('-');
-    return `${y}年${m}月${d}日`;
-}
-
-function changeDate(days) {
-    const date = new Date(currentDate);
-    date.setDate(date.getDate() + days);
-    const newDate = date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
-    selectDate(newDate);
-}
-
-function goToday() {
-    const today = getTodayString();
-    selectDate(today);
-}
-
-function selectDate(date) {
-    currentDate = date;
-    document.getElementById('datePicker').value = date;
-    document.getElementById('currentDateDisplay').textContent = formatDate(date);
-    document.getElementById('statsDate').textContent = date === getTodayString() ? '今日' : formatDate(date);
-    loadOrders(date);
-}
-function loadOrders(date) {
-    // 移除旧监听
-    if (ordersListener) {
-        db.ref('orders').off('value', ordersListener);
-    }
-    
-    // 显示加载中
-    document.getElementById('ordersList').innerHTML = '<div class="col-span-full text-center py-12 text-gray-400"><div class="text-2xl mb-2">⏳</div><p>加载中...</p></div>';
-    
-    // 加载指定日期的订单（按日期前缀查询）
-    ordersListener = db.ref('orders').orderByChild('date').equalTo(date).on('value', (snapshot) => {
-        const orders = [];
-        snapshot.forEach(child => {
-            orders.push({ key: child.key, ...child.val() });
-        });
-        orders.reverse(); // 最新的在前
-        
-        renderOrders(orders);
-        updateStats(orders);
-        updateDailyTotal(orders);
-    }, (error) => {
-        console.error(error);
-        document.getElementById('ordersList').innerHTML = `<div class="col-span-full text-center py-12 text-red-500"><p>加载失败: ${error.message}</p></div>`;
+// 监听所有订单（不过滤日期，确保能收到）
+db.ref('orders').orderByChild('timestamp').limitToLast(100).on('value', (snapshot) => {
+    document.getElementById('connStatus').textContent = '已连接';
+    allOrders = [];
+    snapshot.forEach(child => {
+        allOrders.push({ key: child.key, ...child.val() });
     });
+    allOrders.reverse(); // 最新的在前
+    
+    // 自动判断日期（如果有date字段就用，没有就按timestamp算）
+    allOrders.forEach(order => {
+        if (!order.date && order.timestamp) {
+            const d = new Date(order.timestamp);
+            order.date = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+    });
+    
+    renderOrders();
+    updateStats();
+}, (error) => {
+    document.getElementById('connStatus').textContent = '连接失败: ' + error.message;
+});
+
+function filterDate(days) {
+    if (!currentFilterDate) currentFilterDate = getTodayString();
+    const d = new Date(currentFilterDate);
+    d.setDate(d.getDate() + days);
+    currentFilterDate = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    document.getElementById('dateDisplay').textContent = currentFilterDate === getTodayString() ? '今天' : currentFilterDate;
+    renderOrders();
 }
 
-function renderOrders(orders) {
+function showAll() {
+    currentFilterDate = null;
+    document.getElementById('dateDisplay').textContent = '全部';
+    renderOrders();
+}
+
+function renderOrders() {
     const container = document.getElementById('ordersList');
     
+    // 筛选订单
+    let orders = allOrders;
+    if (currentFilterDate) {
+        orders = allOrders.filter(o => o.date === currentFilterDate);
+    }
+    
     if (orders.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl"><div class="text-4xl mb-2">📭</div><p>该日期暂无订单</p></div>';
+        container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-400 bg-white rounded-xl"><div class="text-4xl mb-2">📭</div><p>' + (currentFilterDate ? '该日期暂无订单' : '等待订单...') + '</p></div>';
         return;
     }
     
     container.innerHTML = orders.map(order => {
         const time = order.timestamp ? new Date(order.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) : '--:--';
         const isNew = order.status === 'pending';
-        const isDone = order.status === 'done';
         
         return `
-            <div class="order-card bg-white rounded-xl shadow p-4 ${isNew ? 'new-order' : ''} ${isDone ? 'opacity-50' : ''}">
+            <div class="order-card bg-white rounded-xl shadow p-4 ${isNew ? 'new-order' : ''}">
                 <div class="flex justify-between items-start mb-3">
                     <div>
                         <div class="flex items-center gap-2 mb-2">
                             <span class="text-2xl font-bold text-gray-800">桌${order.table || '-'}</span>
                             <span class="text-xs bg-gray-100 px-2 py-1 rounded">${time}</span>
                             ${isNew ? '<span class="bg-red-500 text-white text-xs px-2 py-1 rounded animate-pulse">NEW</span>' : ''}
-                            ${order.paymentStatus === 'paid' ? '<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded">💰已付</span>' : ''}
                         </div>
-                        <div class="space-y-1 text-sm">
+                        <div class="space-y-1 text-sm text-gray-600">
                             ${order.items ? order.items.map(item => `
                                 <div class="flex items-center gap-2">
                                     <span>${item.emoji || '🍽️'}</span>
@@ -202,7 +161,7 @@ function renderOrders(orders) {
                         ${order.note ? `<div class="mt-2 text-xs bg-yellow-50 text-yellow-800 p-2 rounded">💬 ${order.note}</div>` : ''}
                     </div>
                 </div>
-                <div class="flex justify-between items-center pt-3 border-t">
+                <div class="flex justify-between items-center pt-3 border-t border-gray-100">
                     <div class="text-xl font-bold text-red-600">$${order.total?.toLocaleString() || 0}</div>
                     <div class="flex gap-2">
                         ${order.status === 'pending' ? 
@@ -213,6 +172,7 @@ function renderOrders(orders) {
                             `<button onclick="setStatus('${order.key}', 'done')" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-bold text-sm">已取餐</button>` :
                             `<div class="text-gray-400 text-sm">已完成</div>`
                         }
+                        <button onclick="deleteOrder('${order.key}')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-sm">删除</button>
                     </div>
                 </div>
             </div>
@@ -220,32 +180,26 @@ function renderOrders(orders) {
     }).join('');
 }
 
-function updateStats(orders) {
+function updateStats() {
+    let orders = allOrders;
+    if (currentFilterDate) orders = allOrders.filter(o => o.date === currentFilterDate);
+    
     document.getElementById('countPending').textContent = orders.filter(o => o.status === 'pending').length;
     document.getElementById('countCooking').textContent = orders.filter(o => o.status === 'cooking').length;
     document.getElementById('countReady').textContent = orders.filter(o => o.status === 'ready').length;
     document.getElementById('countDone').textContent = orders.filter(o => o.status === 'done').length;
 }
 
-function updateDailyTotal(orders) {
-    const total = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-    const count = orders.length;
-    document.getElementById('dailyTotal').textContent = total.toLocaleString();
-    document.getElementById('dailyCount').textContent = count;
-    
-    // 保存到历史记录节点（用于快速统计）
-    if (currentDate === getTodayString() && count > 0) {
-        db.ref(`dailyStats/${currentDate}`).set({
-            total: total,
-            count: count,
-            updatedAt: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-}
-
 function setStatus(key, status) {
     db.ref(`orders/${key}/status`).set(status);
 }
+
+function deleteOrder(key) {
+    if (confirm('确定删除？')) db.ref(`orders/${key}`).remove();
+}
+
+// 初始化显示今天
+filterDate(0);
 </script>
 </body>
 </html>
