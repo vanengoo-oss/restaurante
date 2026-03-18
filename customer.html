@@ -65,15 +65,15 @@
 </div>
 
 <script>
-// ===== Firebase配置 =====
+// ===== Firebase配置（已填好） =====
 const firebaseConfig = {
-    apiKey: "你的API密钥",
-    authDomain: "你的项目.firebaseapp.com",
-    databaseURL: "https://你的项目-default-rtdb.firebaseio.com",
-    projectId: "你的项目",
-    storageBucket: "你的项目.appspot.com",
-    messagingSenderId: "123456",
-    appId: "1:123:web:abc"
+    apiKey: "AIzaSyDlRWSAOCRX5MYsvilkMKYlwIazHEoSg4U",
+    authDomain: "restaurante-tocopilla.firebaseapp.com",
+    databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com",
+    projectId: "restaurante-tocopilla",
+    storageBucket: "restaurante-tocopilla.firebasestorage.app",
+    messagingSenderId: "322511272257",
+    appId: "1:322511272257:web:7fe43210274eaf2fae89c0"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -84,7 +84,7 @@ const menu = [
     { id: 2, name: 'Pollo Kung Pao', price: 7500, img: 'https://images.unsplash.com/photo-1525755662778-989d0524087e?w=400', emoji: '🍗' },
     { id: 3, name: 'Arroz Frito', price: 5500, img: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400', emoji: '🍚' },
     { id: 4, name: 'Dumplings', price: 6000, img: 'https://images.unsplash.com/photo-1496116218417-1a781b1c416c?w=400', emoji: '🥟' },
-    { id: 5, name: 'Bebida', price: 2500, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400', emoji: '🥤' }
+    { id: 5, name: 'Bebida', price: 2500, img: 'https://images.unsplash.com/photo-162248-1622483767028-3f66f32aef97?w=400', emoji: '🥤' }
 ];
 
 let cart = {};
@@ -207,7 +207,6 @@ function submitOrder() {
 
 function closeSuccess() {
     document.getElementById('successModal').classList.remove('show');
-    document.getElementById('submitBtn').disabled = false;
     document.getElementById('submitBtn').disabled = false;
     document.getElementById('submitBtn').textContent = 'Confirmar Pedido';
 }
