@@ -3,225 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mesero - Cobros</title>
+    <title>Menu - Restaurante</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        .order-card { animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .btn-touch { min-height: 48px; touch-action: manipulation; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; touch-action: manipulation; }
+        .btn-touch { min-height: 44px; min-width: 44px; }
         .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .tab-active { background: white; color: #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tab-inactive { background: transparent; color: #93c5fd; }
     </style>
 </head>
-<body class="bg-gray-100 pb-24">
-    <!-- 顶部 -->
+<body class="bg-gray-100 pb-32">
+
+    <!-- 顶部标题栏 -->
     <header class="bg-blue-600 text-white p-4 sticky top-0 z-50 shadow-lg">
-        <h1 class="text-lg font-bold text-center">🍽️ Panel de Mesero</h1>
-        <p class="text-xs text-center text-blue-100 mt-1" id="currentDate"></p>
-        
-        <!-- 切换按钮 -->
-        <div class="flex bg-blue-700 rounded-lg p-1 mt-3">
-            <button onclick="showSection('today')" id="btn-today" class="flex-1 py-2 rounded-md font-bold text-sm bg-white text-blue-600 shadow transition">Pedidos Hoy</button>
-            <button onclick="showSection('history')" id="btn-history" class="flex-1 py-2 rounded-md font-bold text-sm text-blue-100 transition">Historial</button>
-        </div>
+        <h1 class="text-xl font-bold text-center">🍽️ Nuestro Menú</h1>
+        <p class="text-xs text-center text-blue-100 mt-1" id="dateDisplay"></p>
     </header>
 
-    <!-- 今日订单 -->
-    <div id="todaySection" class="p-3 space-y-3">
-        <!-- 统计卡片 -->
-        <div class="grid grid-cols-3 gap-2 mb-2">
-            <div class="bg-white rounded-xl p-3 text-center shadow-sm">
-                <div class="text-xs text-gray-500 mb-1">Pedidos</div>
-                <div class="text-2xl font-bold text-blue-600" id="totalOrders">0</div>
-            </div>
-            <div class="bg-white rounded-xl p-3 text-center shadow-sm">
-                <div class="text-xs text-gray-500 mb-1">Ingresos</div>
-                <div class="text-xl font-bold text-green-600" id="totalRevenue">0</div>
-            </div>
-            <div class="bg-white rounded-xl p-3 text-center shadow-sm">
-                <div class="text-xs text-gray-500 mb-1">Por Cobrar</div>
-                <div class="text-xl font-bold text-yellow-600" id="pendingPayment">0</div>
-            </div>
-        </div>
-
-        <div id="ordersList" class="space-y-3">
-            <div class="text-center text-gray-400 py-8">Cargando...</div>
+    <!-- 分区标签栏 -->
+    <div class="bg-blue-600 sticky top-[72px] z-40 shadow-md">
+        <div class="flex p-2 gap-2">
+            <button onclick="switchTab('drinks')" id="tab-drinks" class="flex-1 py-3 rounded-xl font-bold text-lg transition tab-active flex items-center justify-center gap-2">
+                🥤 Bebidas
+            </button>
+            <button onclick="switchTab('food')" id="tab-food" class="flex-1 py-3 rounded-xl font-bold text-lg transition tab-inactive flex items-center justify-center gap-2">
+                🍔 Comidas
+            </button>
         </div>
     </div>
 
-    <!-- 历史记录 -->
-    <div id="historySection" class="hidden p-3 space-y-3">
-        <div class="bg-white rounded-xl p-4 shadow-sm">
-            <label class="text-sm font-bold text-gray-700 mb-2 block">Seleccionar Fecha</label>
-            <input type="date" id="historyDate" class="w-full p-3 bg-gray-50 border rounded-xl text-lg mb-3">
-            <button onclick="loadHistory()" class="btn-touch w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition">Buscar Historial</button>
+    <!-- 🥤 饮料区 -->
+    <div id="section-drinks" class="p-3 space-y-3 pt-4">
+        <h2 class="text-lg font-bold text-gray-700 mb-2 px-1">Bebidas Frías</h2>
+        
+        <!-- Coca Cola -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🥤</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Coca Cola</h3>
+                <p class="text-gray-500 text-sm">350ml lata</p>
+                <p class="text-green-600 font-bold text-xl mt-1">2.500</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Coca Cola', 2500, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Coca Cola" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Coca Cola', 2500, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
         </div>
-        <div id="historyStats" class="hidden bg-green-100 p-4 rounded-xl text-center font-bold text-green-800 text-lg"></div>
-        <div id="historyList" class="space-y-3"></div>
+
+        <!-- Agua -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl shadow-inner">💧</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Agua Mineral</h3>
+                <p class="text-gray-500 text-sm">500ml sin gas</p>
+                <p class="text-green-600 font-bold text-xl mt-1">1.500</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Agua Mineral', 1500, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Agua Mineral" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Agua Mineral', 1500, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+
+        <!-- Jugo -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🧃</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Jugo Natural</h3>
+                <p class="text-gray-500 text-sm">Naranja o Piña</p>
+                <p class="text-green-600 font-bold text-xl mt-1">2.000</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Jugo Natural', 2000, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Jugo Natural" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Jugo Natural', 2000, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+
+        <!-- Cerveza -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🍺</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Cerveza</h3>
+                <p class="text-gray-500 text-sm">Botella 330ml</p>
+                <p class="text-green-600 font-bold text-xl mt-1">3.500</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Cerveza', 3500, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Cerveza" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Cerveza', 3500, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+    </div>
+    <!-- 🍔 食物区（默认隐藏） -->
+    <div id="section-food" class="p-3 space-y-3 pt-4 hidden">
+        <h2 class="text-lg font-bold text-gray-700 mb-2 px-1">Platos Principales</h2>
+        
+        <!-- Hamburguesa -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🍔</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Hamburguesa Clásica</h3>
+                <p class="text-gray-500 text-sm">Carne, queso, lechuga, tomate</p>
+                <p class="text-green-600 font-bold text-xl mt-1">5.500</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Hamburguesa', 5500, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Hamburguesa" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Hamburguesa', 5500, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+
+        <!-- Papas Fritas -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🍟</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Papas Fritas</h3>
+                <p class="text-gray-500 text-sm">Porción grande con salsa</p>
+                <p class="text-green-600 font-bold text-xl mt-1">3.000</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Papas Fritas', 3000, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Papas Fritas" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Papas Fritas', 3000, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+
+        <!-- Pizza -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🍕</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Pizza Familiar</h3>
+                <p class="text-gray-500 text-sm">Pepperoni o Queso</p>
+                <p class="text-green-600 font-bold text-xl mt-1">12.000</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Pizza', 12000, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Pizza" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Pizza', 12000, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+
+        <!-- Hot Dog -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🌭</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Hot Dog</h3>
+                <p class="text-gray-500 text-sm">Con tocino y palta</p>
+                <p class="text-green-600 font-bold text-xl mt-1">4.500</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Hot Dog', 4500, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Hot Dog" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Hot Dog', 4500, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
+
+        <!-- Empanadas -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-4">
+            <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center text-3xl shadow-inner">🥟</div>
+            <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-800">Empanadas</h3>
+                <p class="text-gray-500 text-sm">Carne o Queso (x3 unidades)</p>
+                <p class="text-green-600 font-bold text-xl mt-1">4.000</p>
+            </div>
+            <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                <button onclick="updateCart('Empanadas', 4000, -1)" class="btn-touch w-10 h-10 bg-white rounded-full shadow text-red-600 font-bold text-xl active:scale-95 transition">−</button>
+                <span id="qty-Empanadas" class="w-8 text-center font-bold text-lg">0</span>
+                <button onclick="updateCart('Empanadas', 4000, 1)" class="btn-touch w-10 h-10 bg-blue-600 rounded-full shadow text-white font-bold text-xl active:scale-95 transition">+</button>
+            </div>
+        </div>
     </div>
 
+    <!-- 底部固定购物车栏 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl safe-bottom z-50">
+        <div class="max-w-md mx-auto p-4">
+            <div class="flex justify-between items-center mb-3">
+                <div>
+                    <span class="text-sm text-gray-500">Total a pagar:</span>
+                    <div class="text-3xl font-bold text-green-600" id="cartTotal">0</div>
+                </div>
+                <div class="text-right text-xs text-gray-400" id="itemCount">0 items</div>
+            </div>
+            <button onclick="submitOrder()" id="orderBtn" disabled class="btn-touch w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg disabled:bg-gray-300 disabled:shadow-none active:scale-95 transition transform">
+                Realizar Pedido →
+            </button>
+        </div>
+    </div>
     <script>
-        function formatCLP(amount) {
-            if (!amount || isNaN(amount)) return '0';
-            return Math.round(parseFloat(amount)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
-
-        const firebaseConfig = { databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com" };
+        const firebaseConfig = {
+            databaseURL: "https://restaurante-tocopilla-default-rtdb.firebaseio.com"
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        
+        let cart = {};
+
         function getChileDate() {
             const now = new Date();
             const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
             return `${chileTime.getFullYear()}-${String(chileTime.getMonth()+1).padStart(2,'0')}-${String(chileTime.getDate()).padStart(2,'0')}`;
         }
-        
-        const today = getChileDate();
-        document.getElementById('currentDate').textContent = today;
-        document.getElementById('historyDate').value = today;
-        
-        let todayOrders = {};
-        
-        // 第1段结束，第2段继续...
-        function listenToOrders() {
-            db.ref('orders').on('value', (snapshot) => {
-                const allOrders = snapshot.val() || {};
-                todayOrders = {};
-                Object.keys(allOrders).forEach(id => {
-                    if (allOrders[id].date === today) todayOrders[id] = allOrders[id];
-                });
-                renderOrders(todayOrders);
-                updateSummary(todayOrders);
-            });
-        }
-        
-        function renderOrders(orders) {
-            const container = document.getElementById('ordersList');
-            if (Object.keys(orders).length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-400 py-12 text-lg">No hay pedidos hoy</div>';
-                return;
-            }
-            
-            const sortedIds = Object.keys(orders).sort((a, b) => (orders[b].timestamp || 0) - (orders[a].timestamp || 0));
-            
-            container.innerHTML = sortedIds.map(id => {
-                const order = orders[id];
-                const isPaid = order.paymentStatus === 'paid';
-                
-                return `
-                <div class="order-card bg-white rounded-xl shadow-lg border-l-8 ${isPaid ? 'border-green-500' : 'border-red-500'} p-4">
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xl font-bold text-gray-800">#${id.slice(-4)}</span>
-                                <span class="text-xs px-2 py-1 rounded-full font-bold ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : order.status === 'cooking' ? 'bg-blue-100 text-blue-800' : order.status === 'ready' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                                    ${order.status === 'pending' ? 'PEND' : order.status === 'cooking' ? 'COC' : order.status === 'ready' ? 'LISTO' : 'DONE'}
-                                </span>
-                            </div>
-                            <div class="text-xs text-gray-400">${new Date(order.timestamp).toLocaleTimeString('es-CL', {hour: '2-digit', minute:'2-digit'})}</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-3xl font-bold ${isPaid ? 'text-green-600' : 'text-gray-800'}">${formatCLP(order.total)}</div>
-                            <div class="text-xs ${isPaid ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'} px-2 py-1 rounded-full font-bold mt-1 inline-block">
-                                ${isPaid ? '✓ PAGADO' : '⚠ PENDIENTE'}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="bg-gray-50 rounded-lg p-3 mb-3 space-y-2">
-                        ${(order.items || []).map(item => `
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-700"><span class="font-bold">${item.quantity}x</span> ${item.name}</span>
-                                <span class="font-mono text-gray-600">${formatCLP(item.price * item.quantity)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    ${!isPaid ? `
-                    <div class="grid grid-cols-3 gap-2">
-                        <button onclick="processPayment('${id}', 'cash')" class="btn-touch bg-green-500 active:bg-green-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition">💵 Efectivo</button>
-                        <button onclick="processPayment('${id}', 'card')" class="btn-touch bg-blue-500 active:bg-blue-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition">💳 Tarjeta</button>
-                        <button onclick="processPayment('${id}', 'transfer')" class="btn-touch bg-purple-500 active:bg-purple-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition">📱 Transf</button>
-                    </div>
-                    ` : `
-                    <div class="bg-green-50 text-green-800 text-center py-2 rounded-lg font-bold text-sm">
-                        ✓ ${order.paymentMethod || 'Pagado'}
-                    </div>
-                    `}
-                </div>
-                `;
-            }).join('');
+        document.getElementById('dateDisplay').textContent = getChileDate();
+
+        function formatCLP(amount) {
+            return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
 
-        function updateSummary(orders) {
-            let revenue = 0, pending = 0;
-            Object.values(orders).forEach(order => {
-                const total = parseFloat(order.total) || 0;
-                if (order.paymentStatus === 'paid') revenue += total;
-                else pending += total;
-            });
-            document.getElementById('totalOrders').textContent = Object.keys(orders).length;
-            document.getElementById('totalRevenue').textContent = formatCLP(revenue);
-            document.getElementById('pendingPayment').textContent = formatCLP(pending);
+        function switchTab(tab) {
+            if (tab === 'drinks') {
+                document.getElementById('section-drinks').classList.remove('hidden');
+                document.getElementById('section-food').classList.add('hidden');
+                document.getElementById('tab-drinks').className = 'flex-1 py-3 rounded-xl font-bold text-lg transition tab-active flex items-center justify-center gap-2';
+                document.getElementById('tab-food').className = 'flex-1 py-3 rounded-xl font-bold text-lg transition tab-inactive flex items-center justify-center gap-2';
+            } else {
+                document.getElementById('section-drinks').classList.add('hidden');
+                document.getElementById('section-food').classList.remove('hidden');
+                document.getElementById('tab-drinks').className = 'flex-1 py-3 rounded-xl font-bold text-lg transition tab-inactive flex items-center justify-center gap-2';
+                document.getElementById('tab-food').className = 'flex-1 py-3 rounded-xl font-bold text-lg transition tab-active flex items-center justify-center gap-2';
+            }
         }
-        
-        function processPayment(orderId, method) {
-            const methodNames = { 'cash': 'Efectivo', 'card': 'Tarjeta', 'transfer': 'Transferencia' };
-            const amount = todayOrders[orderId]?.total || 0;
+
+        function updateCart(name, price, change) {
+            if (!cart[name]) {
+                cart[name] = { name: name, price: price, quantity: 0 };
+            }
+            cart[name].quantity += change;
+            if (cart[name].quantity <= 0) {
+                delete cart[name];
+            }
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const allItems = ['Coca Cola', 'Agua Mineral', 'Jugo Natural', 'Cerveza', 
+                             'Hamburguesa', 'Papas Fritas', 'Pizza', 'Hot Dog', 'Empanadas'];
             
-            if (!confirm(`Confirmar pago de ${formatCLP(amount)} CLP\nMétodo: ${methodNames[method]}?`)) return;
+            allItems.forEach(name => {
+                const el = document.getElementById('qty-' + name);
+                if (el) el.textContent = cart[name] ? cart[name].quantity : 0;
+            });
+
+            let total = 0, count = 0;
+            Object.values(cart).forEach(item => {
+                total += item.price * item.quantity;
+                count += item.quantity;
+            });
+
+            document.getElementById('cartTotal').textContent = formatCLP(total);
+            document.getElementById('itemCount').textContent = count + ' item' + (count !== 1 ? 's' : '');
+            document.getElementById('orderBtn').disabled = total <= 0;
             
-            db.ref('orders/' + orderId).update({
-                paymentStatus: 'paid', paymentMethod: methodNames[method], paidAt: Date.now()
-            }).then(() => alert('✓ Pago registrado'));
+            if (count > 0) {
+                document.getElementById('orderBtn').textContent = `Realizar Pedido (${count}) →`;
+            } else {
+                document.getElementById('orderBtn').textContent = 'Realizar Pedido →';
+            }
         }
-        
-        function showSection(section) {
-            document.getElementById('todaySection').classList.toggle('hidden', section !== 'today');
-            document.getElementById('historySection').classList.toggle('hidden', section !== 'history');
-            document.getElementById('btn-today').className = section === 'today' ? 'flex-1 py-2 rounded-md font-bold text-sm bg-white text-blue-600 shadow transition' : 'flex-1 py-2 rounded-md font-bold text-sm text-blue-100 transition';
-            document.getElementById('btn-history').className = section === 'history' ? 'flex-1 py-2 rounded-md font-bold text-sm bg-white text-blue-600 shadow transition' : 'flex-1 py-2 rounded-md font-bold text-sm text-blue-100 transition';
-        }
-        
-        function loadHistory() {
-            const date = document.getElementById('historyDate').value;
-            db.ref('orders').once('value', (snapshot) => {
-                const all = snapshot.val() || {};
-                const filtered = {};
-                Object.keys(all).forEach(id => { if (all[id].date === date) filtered[id] = all[id]; });
-                
-                const statsDiv = document.getElementById('historyStats');
-                const container = document.getElementById('historyList');
-                
-                if (Object.keys(filtered).length === 0) {
-                    container.innerHTML = `<div class="text-center text-gray-400 py-8">No hay pedidos para ${date}</div>`;
-                    statsDiv.classList.add('hidden');
-                    return;
-                }
-                
-                let revenue = 0;
-                Object.values(filtered).forEach(o => { if (o.paymentStatus === 'paid') revenue += o.total || 0; });
-                
-                statsDiv.innerHTML = `Total: ${formatCLP(revenue)} CLP`;
-                statsDiv.classList.remove('hidden');
-                
-                container.innerHTML = Object.keys(filtered).sort((a,b) => filtered[b].timestamp - filtered[a].timestamp).map(id => {
-                    const o = filtered[id];
-                    return `
-                    <div class="bg-white rounded-xl shadow p-4 border-l-4 ${o.paymentStatus==='paid'?'border-green-500':'border-red-500'}">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-gray-800">#${id.slice(-4)}</span>
-                            <span class="text-xl font-bold ${o.paymentStatus==='paid'?'text-green-600':'text-red-600'}">${formatCLP(o.total)}</span>
-                        </div>
-                        <div class="text-sm text-gray-600">${(o.items || []).map(i => i.quantity + 'x ' + i.name).join(', ')}</div>
-                    </div>`;
-                }).join('');
+
+        function submitOrder() {
+            const items = Object.values(cart).filter(i => i.quantity > 0);
+            const total = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+            
+            db.ref('orders').push({
+                items: items, 
+                total: total, 
+                date: getChileDate(), 
+                timestamp: Date.now(),
+                status: 'pending', 
+                paymentStatus: 'unpaid'
+            }).then(() => {
+                alert('✓ Pedido enviado!\nTotal: ' + formatCLP(total) + ' CLP');
+                cart = {}; 
+                updateDisplay();
+            }).catch(err => {
+                alert('Error: ' + err.message);
             });
         }
-        
-        listenToOrders();
     </script>
 </body>
 </html>
